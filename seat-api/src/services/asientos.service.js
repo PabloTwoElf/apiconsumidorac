@@ -2,11 +2,50 @@ import { v4 as uuidv4 } from 'uuid';
 
 const SEAT_HOLD_TTL_MS = parseInt(process.env.SEAT_HOLD_TTL_MS || '600000', 10);
 
+// Configuración de precios
+const PRICE_CONFIG = {
+  BASE_PRICE: 50000, // Precio base por asiento (en centavos o tu moneda)
+  DISCOUNTS: {
+    2: 0.05,    // 5% descuento por 2 asientos
+    3: 0.07,    // 7% descuento por 3 asientos
+    4: 0.10,    // 10% descuento por 4+ asientos
+  },
+};
+
 // In-memory storage
 const holds = new Map();
 const reserved = new Map();
 
 const makeKey = (rutaId, fecha, asiento) => `${rutaId}|${fecha}|${asiento}`;
+
+/**
+ * Calcula el precio total con descuentos
+ */
+export const calculatePrice = (quantity) => {
+  const baseTotal = PRICE_CONFIG.BASE_PRICE * quantity;
+  let discount = 0;
+
+  if (quantity >= 4) {
+    discount = baseTotal * PRICE_CONFIG.DISCOUNTS[4];
+  } else if (quantity >= 3) {
+    discount = baseTotal * PRICE_CONFIG.DISCOUNTS[3];
+  } else if (quantity >= 2) {
+    discount = baseTotal * PRICE_CONFIG.DISCOUNTS[2];
+  }
+
+  const discountPercent = quantity >= 4 ? 10 : quantity >= 3 ? 7 : quantity >= 2 ? 5 : 0;
+  const total = baseTotal - discount;
+
+  return {
+    quantity,
+    basePrice: PRICE_CONFIG.BASE_PRICE,
+    baseTotal,
+    discountPercent,
+    discountAmount: Math.round(discount),
+    total: Math.round(total),
+    savings: discount > 0 ? `Ahorras: $${Math.round(discount)}` : '',
+  };
+};
 
 /**
  * Purga todos los holds expirados

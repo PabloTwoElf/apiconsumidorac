@@ -44,6 +44,13 @@ app.use(
 app.use(express.json());
 
 // ======================
+// Ruta principal → Swagger
+// ======================
+app.get("/", (req, res) => {
+  res.redirect("/api-docs");
+});
+
+// ======================
 // Swagger (FIXED server url)
 // ======================
 const swaggerOptions = {
@@ -132,6 +139,11 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+// Ruta principal → Swagger UI
+app.get("/", (req, res) => {
+  res.redirect("/api-docs");
+});
+
 // Swagger endpoints
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
@@ -154,6 +166,81 @@ app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
  *               $ref: '#/components/schemas/HealthResponse'
  */
 app.get("/health", (req, res) => res.json({ ok: true }));
+
+// ======================
+// ENDPOINT PRINCIPAL: CALCULAR PRECIO CON DESCUENTOS
+// ======================
+/**
+ * @swagger
+ * /calcular-precio:
+ *   post:
+ *     summary: Calcula precio total con descuentos automáticos
+ *     tags:
+ *       - Cálculos de Precio
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               cantidad:
+ *                 type: number
+ *                 example: 3
+ *                 description: Cantidad de asientos
+ *     responses:
+ *       200:
+ *         description: Cálculo exitoso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 cantidad:
+ *                   type: number
+ *                 precioUnitario:
+ *                   type: number
+ *                 subtotal:
+ *                   type: number
+ *                 porcentajeDescuento:
+ *                   type: number
+ *                 montoDescuento:
+ *                   type: number
+ *                 total:
+ *                   type: number
+ *                 ahorros:
+ *                   type: string
+ */
+app.post("/calcular-precio", (req, res) => {
+  try {
+    const { cantidad } = req.body;
+    
+    if (!cantidad || cantidad < 1) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: "Cantidad debe ser mayor a 0" 
+      });
+    }
+
+    const pricing = asientosService.calculatePrice(cantidad);
+    
+    res.json({
+      ok: true,
+      cantidad: pricing.quantity,
+      precioUnitario: pricing.basePrice,
+      subtotal: pricing.baseTotal,
+      porcentajeDescuento: pricing.discountPercent,
+      montoDescuento: pricing.discountAmount,
+      total: pricing.total,
+      ahorros: pricing.savings,
+    });
+  } catch (error) {
+    console.error("Error en /calcular-precio:", error);
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
 
 // API Routes
 app.use("/api/asientos", asientosRoutes);
