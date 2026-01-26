@@ -284,12 +284,85 @@ console.log(confirmData.ok); // true
 
 ## Despliegue en Render
 
-1. Crea un nuevo "Web Service" en Render
-2. Conecta este repositorio
-3. Build command: `npm install`
-4. Start command: `npm start`
-5. Configura variables de entorno en el panel de Render
-6. URL base: `https://tu-render-app.onrender.com`
+### Paso 1: Preparar repositorio
+
+```bash
+# En la carpeta seat-api, commit y push
+git add .
+git commit -m "feat: configurar para Render"
+git push origin main
+```
+
+### Paso 2: Crear Web Service en Render
+
+1. Ir a https://dashboard.render.com/
+2. Click en **"New +"** → **"Web Service"**
+3. Seleccionar **"Deploy an existing Git repository"**
+4. Buscar y conectar el repositorio
+
+### Paso 3: Configurar Render
+
+**Build & Deploy Settings:**
+- **Name:** `seat-api`
+- **Environment:** `Node`
+- **Build Command:** `npm install`
+- **Start Command:** `npm start`
+- **Plan:** Free o Starter
+
+**Environment Variables:**
+
+Ir a **Settings** → **Environment** y agregar:
+
+```
+PORT=5000
+NODE_ENV=production
+SEAT_HOLD_TTL_MS=600000
+PURGE_INTERVAL_MS=120000
+ALLOWED_ORIGINS=https://apiconsumidorac.vercel.app
+PUBLIC_BASE_URL=https://seat-api-xxxxx.onrender.com
+```
+
+(Render proporciona la URL automáticamente)
+
+### Paso 4: Deploy y obtener URL
+
+Una vez desplegado, Render te dará una URL como:
+```
+https://seat-api-xxxxx.onrender.com
+```
+
+### Paso 5: Actualizar Frontend
+
+En Vercel (apiconsumidorac):
+
+**Settings → Environment Variables:**
+
+```
+VITE_SEAT_API_URL=https://seat-api-xxxxx.onrender.com
+```
+
+Luego redeploy.
+
+## Notas Importantes para Render
+
+- ⚠️ El plan **Free** duerme después de 15 min sin uso (puede causar retrasos)
+- 💾 **Storage en memoria**: Los datos se pierden al redeploy
+- 🔒 **CORS**: Configurado para permitir solo tu dominio de Vercel
+- 📚 **Swagger**: Disponible en `/api-docs`
+- ⏱️ **Auto-purge**: Se ejecuta cada 2 minutos (ajustable en `PURGE_INTERVAL_MS`)
+
+## Testing en Producción
+
+```bash
+# Health check
+curl https://seat-api-xxxxx.onrender.com/health
+
+# Obtener asientos
+curl "https://seat-api-xxxxx.onrender.com/api/asientos/disponibles?rutaId=123&fecha=2026-01-26"
+
+# Ver Swagger
+https://seat-api-xxxxx.onrender.com/api-docs
+```
 
 ## Licencia
 

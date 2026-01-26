@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: seat-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: SEAT_HOLD_TTL_MS
+        value: 600000
+      - key: PURGE_INTERVAL_MS
+        value: 120000
+      - key: ALLOWED_ORIGINS
+        scope: run
+        value: https://apiconsumidorac.vercel.app
+      - key: PUBLIC_BASE_URL
+        scope: run
+        value: ${RENDER_EXTERNAL_URL}
