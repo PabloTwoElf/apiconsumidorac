@@ -1,132 +1,145 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import asientosRoutes from './routes/asientos.routes.js';
-import * as asientosService from './services/asientos.service.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import swaggerJsdoc from "swagger-jsdoc";
+import swaggerUi from "swagger-ui-express";
+import asientosRoutes from "./routes/asientos.routes.js";
+import * as asientosService from "./services/asientos.service.js";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const NODE_ENV = process.env.NODE_ENV || 'development';
-const PURGE_INTERVAL_MS = parseInt(process.env.PURGE_INTERVAL_MS || '120000', 10);
+const NODE_ENV = process.env.NODE_ENV || "development";
+const PURGE_INTERVAL_MS = parseInt(process.env.PURGE_INTERVAL_MS || "120000", 10);
 
-// Configuración CORS
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-  : NODE_ENV === 'development'
-    ? '*'
-    : [];
+// ======================
+// CORS (FIXED)
+// ======================
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+  : [];
 
-const corsOptions = {
-  origin: ALLOWED_ORIGINS,
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Permitir requests sin origin (Postman/curl)
+      if (!origin) return cb(null, true);
 
-// Swagger configuration
+      // En desarrollo, si no configuraste ALLOWED_ORIGINS, permite todo
+      if (NODE_ENV === "development" && allowedOrigins.length === 0) {
+        return cb(null, true);
+      }
+
+      // En producción: solo orígenes permitidos
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+
+      return cb(new Error("CORS bloqueado para este origen: " + origin), false);
+    },
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
+
+app.use(express.json());
+
+// ======================
+// Swagger (FIXED server url)
+// ======================
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'Seat Availability API',
-      version: '1.0.0',
-      description:
-        'API REST para gestión de disponibilidad de asientos con holds y reservas',
-      contact: {
-        name: 'API Support',
-      },
+      title: "Seat Availability API",
+      version: "1.0.0",
+      description: "API REST para gestión de disponibilidad de asientos con holds y reservas",
+      contact: { name: "API Support" },
     },
     servers: [
       {
-        url: `http://localhost:${PORT}`,
-        description: 'Development server',
+        url: process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`,
+        description: "API server",
       },
     ],
     components: {
       schemas: {
         ErrorResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean', example: false },
-            error: { type: 'string' },
+            ok: { type: "boolean", example: false },
+            error: { type: "string" },
           },
         },
         HealthResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean', example: true },
+            ok: { type: "boolean", example: true },
           },
         },
         AvailableSeatsResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean' },
-            rutaId: { type: 'string' },
-            fecha: { type: 'string', format: 'date' },
-            available: { type: 'array', items: { type: 'number' } },
-            total: { type: 'number' },
+            ok: { type: "boolean" },
+            rutaId: { type: "string" },
+            fecha: { type: "string", format: "date" },
+            available: { type: "array", items: { type: "number" } },
+            total: { type: "number" },
           },
         },
         HoldResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean' },
-            holdId: { type: 'string' },
-            expiresAt: { type: 'number' },
-            remainingMs: { type: 'number' },
+            ok: { type: "boolean" },
+            holdId: { type: "string" },
+            expiresAt: { type: "number" },
+            remainingMs: { type: "number" },
           },
         },
         HoldsListResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean' },
+            ok: { type: "boolean" },
             holds: {
-              type: 'array',
+              type: "array",
               items: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  holdId: { type: 'string' },
-                  rutaId: { type: 'string' },
-                  fecha: { type: 'string', format: 'date' },
-                  asiento: { type: 'number' },
-                  userId: { type: 'string' },
-                  expiresAt: { type: 'number' },
-                  remainingMs: { type: 'number' },
+                  holdId: { type: "string" },
+                  rutaId: { type: "string" },
+                  fecha: { type: "string", format: "date" },
+                  asiento: { type: "number" },
+                  userId: { type: "string" },
+                  expiresAt: { type: "number" },
+                  remainingMs: { type: "number" },
                 },
               },
             },
-            count: { type: 'number' },
+            count: { type: "number" },
           },
         },
         ConfirmResponse: {
-          type: 'object',
+          type: "object",
           properties: {
-            ok: { type: 'boolean' },
-            reservedAt: { type: 'number' },
+            ok: { type: "boolean" },
+            reservedAt: { type: "number" },
           },
         },
       },
     },
   },
-  apis: ['./src/routes/*.js'],
+  apis: ["./src/routes/*.js"],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-// Middlewares
-app.use(cors(corsOptions));
-app.use(express.json());
+// Swagger endpoints
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
 
-// Swagger
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get('/api-docs.json', (req, res) => {
-  res.json(swaggerSpec);
-});
+// ======================
+// Routes
+// ======================
 
-// Health check
 /**
  * @swagger
  * /health:
@@ -140,51 +153,54 @@ app.get('/api-docs.json', (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/HealthResponse'
  */
-app.get('/health', (req, res) => {
-  res.json({ ok: true });
-});
+app.get("/health", (req, res) => res.json({ ok: true }));
 
 // API Routes
-app.use('/api/asientos', asientosRoutes);
+app.use("/api/asientos", asientosRoutes);
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    ok: false,
-    error: 'Endpoint not found',
-  });
+  res.status(404).json({ ok: false, error: "Endpoint not found" });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({
-    ok: false,
-    error: 'Internal server error',
-  });
+  res.status(500).json({ ok: false, error: err.message || "Internal server error" });
 });
 
-// Purga automática periódica
+// ======================
+// Purge expired holds
+// ======================
 setInterval(() => {
-  const purged = asientosService.purgeExpiredHolds();
-  if (purged > 0) {
-    console.log(`[Purge] Removed ${purged} expired holds`);
+  try {
+    const purged = asientosService.purgeExpiredHolds();
+    if (purged > 0) console.log(`[Purge] Removed ${purged} expired holds`);
+  } catch (e) {
+    console.error("[Purge] error:", e?.message || e);
   }
 }, PURGE_INTERVAL_MS);
 
 // Start server
 app.listen(PORT, () => {
+  const corsInfo =
+    allowedOrigins.length > 0
+      ? allowedOrigins.join(", ")
+      : NODE_ENV === "development"
+      ? "(dev) allow all"
+      : "(prod) none configured";
+
   console.log(`
 ╔════════════════════════════════════════╗
 ║   Seat Availability API                ║
-║   Node.js ${process.version.split('.')[0]}+ | Express      ║
+║   Node.js ${process.version.split(".")[0]}+ | Express      ║
 ╚════════════════════════════════════════╝
 
 🚀 Server running on port ${PORT}
-📚 Documentation: http://localhost:${PORT}/api-docs
-🏥 Health check: http://localhost:${PORT}/health
+📚 Documentation: ${process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`}/api-docs
+🏥 Health check: ${process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`}/health
 🌍 Environment: ${NODE_ENV}
-🔒 CORS Origins: ${Array.isArray(ALLOWED_ORIGINS) ? ALLOWED_ORIGINS.join(', ') : ALLOWED_ORIGINS}
+🔒 CORS Origins: ${corsInfo}
 ⏱️  Hold TTL: ${process.env.SEAT_HOLD_TTL_MS || 600000}ms
 🧹 Purge interval: ${PURGE_INTERVAL_MS}ms
   `);
