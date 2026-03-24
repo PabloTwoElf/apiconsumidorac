@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 
-const SEAT_HOLD_TTL_MS = parseInt(process.env.SEAT_HOLD_TTL_MS || '600000', 10);
+export const SEAT_HOLD_TTL_MS = parseInt(process.env.SEAT_HOLD_TTL_MS || '600000', 10);
 
 // Configuración de precios
 const PRICE_CONFIG = {
@@ -67,34 +67,40 @@ export const purgeExpiredHolds = () => {
 /**
  * Obtiene asientos disponibles (no están en hold ni reserved)
  */
-export const getAvailableSeats = (rutaId, fecha) => {
-  const occupiedSeats = new Set();
+export const getSeatMap = (rutaId, fecha) => {
+  const now = Date.now();
+  const heldSeats = new Map();
 
   // Buscar holds activos
-  for (const [key] of holds) {
+  for (const [key, hold] of holds) {
     const [r, f, seat] = key.split('|');
     if (r === rutaId && f === fecha) {
-      occupiedSeats.add(parseInt(seat, 10));
+      const remainingMs = hold.expiresAt - now;
+      if (remainingMs > 0) {
+        heldSeats.set(parseInt(seat, 10), hold);
+      }
     }
   }
 
-  // Buscar reservas confirmadas
-  for (const [key] of reserved) {
-    const [r, f, seat] = key.split('|');
-    if (r === rutaId && f === fecha) {
-      occupiedSeats.add(parseInt(seat, 10));
-    }
-  }
-
-  // Retornar asientos disponibles (1-40)
-  const available = [];
+  const seats = [];
   for (let i = 1; i <= 40; i++) {
-    if (!occupiedSeats.has(i)) {
-      available.push(i);
+    const key = makeKey(rutaId, fecha, i);
+    if (reserved.has(key)) {
+      seats.push({ numero: i, estado: 'reserved' });
+    } else if (heldSeats.has(i)) {
+      const hold = heldSeats.get(i);
+      seats.push({ numero: i, estado: 'held', expiresAt: hold.expiresAt });
+    } else {
+      seats.push({ numero: i, estado: 'available' });
     }
   }
 
-  return available;
+  return seats;
+};
+
+export const getAvailableSeats = (rutaId, fecha) => {
+  const seats = getSeatMap(rutaId, fecha);
+  return seats.filter((seat) => seat.estado === 'available').map((seat) => seat.numero);
 };
 
 /**
@@ -128,8 +134,10 @@ export const createHold = (rutaId, fecha, asiento, userId) => {
   return {
     ok: true,
     holdId,
+    asiento,
     expiresAt,
     remainingMs: SEAT_HOLD_TTL_MS,
+    ttlMs: SEAT_HOLD_TTL_MS,
   };
 };
 
@@ -230,9 +238,11 @@ export const getStats = () => {
 export default {
   purgeExpiredHolds,
   getAvailableSeats,
+  getSeatMap,
   createHold,
   getHolds,
   releaseHold,
   confirmReservation,
   getStats,
+  SEAT_HOLD_TTL_MS,
 };

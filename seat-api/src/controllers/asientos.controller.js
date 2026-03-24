@@ -17,12 +17,17 @@ export const getAvailableSeats = (req, res) => {
       });
     }
 
-    const available = asientosService.getAvailableSeats(rutaId, fecha);
+    const asientos = asientosService.getSeatMap(rutaId, fecha);
+    const available = asientos
+      .filter((seat) => seat.estado === 'available')
+      .map((seat) => seat.numero);
 
     res.json({
       ok: true,
       rutaId,
       fecha,
+      ttlMs: asientosService.SEAT_HOLD_TTL_MS,
+      asientos,
       available,
       total: available.length,
     });
