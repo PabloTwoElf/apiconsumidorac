@@ -89,6 +89,18 @@ const swaggerOptions = {
             ok: { type: "boolean" },
             rutaId: { type: "string" },
             fecha: { type: "string", format: "date" },
+            ttlMs: { type: "number" },
+            asientos: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  numero: { type: "number" },
+                  estado: { type: "string", enum: ["available", "held", "reserved"] },
+                  expiresAt: { type: "number" },
+                },
+              },
+            },
             available: { type: "array", items: { type: "number" } },
             total: { type: "number" },
           },

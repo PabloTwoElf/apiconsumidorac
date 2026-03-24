@@ -67,6 +67,12 @@ Obtiene asientos disponibles para una ruta y fecha.
   "ok": true,
   "rutaId": "123",
   "fecha": "2026-01-26",
+  "ttlMs": 600000,
+  "asientos": [
+    { "numero": 1, "estado": "available" },
+    { "numero": 2, "estado": "held", "expiresAt": 1704960600000 },
+    { "numero": 3, "estado": "reserved" }
+  ],
   "available": [1, 2, 3, 5, 6],
   "total": 5
 }
@@ -95,8 +101,10 @@ Crea un hold (bloqueo temporal) para un asiento. Retorna un `holdId` que expira 
 {
   "ok": true,
   "holdId": "hold_1704960000000_0.1234",
+  "asiento": 5,
   "expiresAt": 1704960600000,
-  "remainingMs": 600000
+  "remainingMs": 600000,
+  "ttlMs": 600000
 }
 ```
 
