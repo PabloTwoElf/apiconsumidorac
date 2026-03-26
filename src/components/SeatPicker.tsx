@@ -67,6 +67,7 @@ const PRICE_CONFIG = {
     2: 0.05,
     3: 0.07,
     4: 0.10,
+    5: 0.20,
   },
 };
 
@@ -74,15 +75,17 @@ function calculatePrice(quantity: number): PriceInfo {
   const baseTotal = PRICE_CONFIG.BASE_PRICE * quantity;
   let discount = 0;
 
-  if (quantity >= 4) {
+  if (quantity >= 5) {
+    discount = baseTotal * PRICE_CONFIG.DISCOUNTS[5];
+  } else if (quantity === 4) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[4];
-  } else if (quantity >= 3) {
+  } else if (quantity === 3) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[3];
-  } else if (quantity >= 2) {
+  } else if (quantity === 2) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[2];
   }
 
-  const discountPercent = quantity >= 4 ? 10 : quantity >= 3 ? 7 : quantity >= 2 ? 5 : 0;
+  const discountPercent = quantity >= 5 ? 20 : quantity === 4 ? 10 : quantity === 3 ? 7 : quantity === 2 ? 5 : 0;
   const total = baseTotal - discount;
 
   return {
@@ -155,8 +158,10 @@ export default function SeatPicker() {
 
   const [data, setData] = useState<DisponiblesResponse | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [companyName, setCompanyName] = useState<string>("");
   const [msg, setMsg] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const MAX_SEATS = 10;
 
   const grid = useMemo(() => buildGrid(data?.asientos ?? []), [data]);
   const priceInfo = useMemo(() => calculatePrice(selected.size), [selected.size]);
@@ -198,6 +203,11 @@ export default function SeatPicker() {
 
   async function hold() {
     if (selected.size === 0) return;
+    if (selected.size >= 5 && !companyName.trim()) {
+      setMsg("⚠️ Debes ingresar el Nombre de la Compañía para aplicar el descuento corporativo de 5 o más asientos.");
+      return;
+    }
+
     setMsg("");
     setLoading(true);
 
@@ -207,7 +217,10 @@ export default function SeatPicker() {
         const r = await fetch(`${API}/api/asientos/reservar`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rutaId, fecha, asiento, userId: "user-app" }),
+          body: JSON.stringify({ 
+            rutaId, fecha, asiento, userId: "user-app", 
+            companyName: selected.size >= 5 ? companyName.trim() : undefined 
+          }),
         });
 
         const j = (await r.json()) as HoldResponse;
@@ -226,6 +239,7 @@ export default function SeatPicker() {
         `✅ ${selected.size} asiento(s) bloqueado(s). Total: $${priceInfo.total} ${priceInfo.savings}`
       );
       setSelected(new Set());
+      setCompanyName("");
       await load();
     } catch (error) {
       setMsg(`❌ Error: ${error instanceof Error ? error.message : "Desconocido"}`);
@@ -243,15 +257,20 @@ export default function SeatPicker() {
     const newSelected = new Set(selected);
     if (newSelected.has(seatNumber)) {
       newSelected.delete(seatNumber);
+      if (msg.startsWith("⚠️ No puedes")) setMsg("");
     } else {
+      if (newSelected.size >= MAX_SEATS) {
+        setMsg(`⚠️ No puedes seleccionar más de ${MAX_SEATS} asientos en una sola reserva.`);
+        return;
+      }
       newSelected.add(seatNumber);
     }
     setSelected(newSelected);
   }
 
-  const availableCount = data?.asientos.filter((s) => s.estado === "available").length ?? 0;
-  const heldCount = data?.asientos.filter((s) => s.estado === "held").length ?? 0;
-  const reservedCount = data?.asientos.filter((s) => s.estado === "reserved").length ?? 0;
+  const availableCount = data?.asientos?.filter((s) => s.estado === "available").length ?? 0;
+  const heldCount = data?.asientos?.filter((s) => s.estado === "held").length ?? 0;
+  const reservedCount = data?.asientos?.filter((s) => s.estado === "reserved").length ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 p-4 md:p-8">
@@ -479,6 +498,22 @@ export default function SeatPicker() {
                       </strong>
                     </div>
                   </div>
+
+                  {/* Company Name Input for 5+ seats */}
+                  {selected.size >= 5 && (
+                    <div className="bg-indigo-900/40 border border-indigo-700/50 rounded-xl p-3 my-4">
+                      <label className="block text-xs text-indigo-300 font-semibold mb-1.5 uppercase tracking-wider">
+                        🏢 Nombre de la Compañía
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="Ej. Viajes Nova S.A."
+                        className="w-full bg-gray-950 border border-gray-700 focus:border-indigo-500 rounded-lg px-3 py-2 text-sm text-gray-100 outline-none transition-colors"
+                      />
+                    </div>
+                  )}
 
                   {/* Actions */}
                   <button

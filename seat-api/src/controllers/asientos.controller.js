@@ -47,7 +47,7 @@ export const createHold = (req, res) => {
   try {
     asientosService.purgeExpiredHolds();
 
-    const { rutaId, fecha, asiento, userId } = req.body;
+    const { rutaId, fecha, asiento, userId, companyName } = req.body;
 
     if (!rutaId || !fecha || asiento === undefined || !userId) {
       return res.status(400).json({
@@ -63,7 +63,7 @@ export const createHold = (req, res) => {
       });
     }
 
-    const result = asientosService.createHold(rutaId, fecha, asiento, userId);
+    const result = asientosService.createHold(rutaId, fecha, asiento, userId, companyName);
 
     if (!result.ok) {
       return res.status(409).json(result);

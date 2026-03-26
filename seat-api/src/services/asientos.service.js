@@ -2,13 +2,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const SEAT_HOLD_TTL_MS = parseInt(process.env.SEAT_HOLD_TTL_MS || '600000', 10);
 
-// Configuración de precios
 const PRICE_CONFIG = {
-  BASE_PRICE: 50000, // Precio base por asiento (en centavos o tu moneda)
+  BASE_PRICE: 50000,
   DISCOUNTS: {
-    2: 0.05,    // 5% descuento por 2 asientos
-    3: 0.07,    // 7% descuento por 3 asientos
-    4: 0.10,    // 10% descuento por 4+ asientos
+    2: 0.05,
+    3: 0.07,
+    4: 0.10,
+    5: 0.20,
   },
 };
 
@@ -25,15 +25,17 @@ export const calculatePrice = (quantity) => {
   const baseTotal = PRICE_CONFIG.BASE_PRICE * quantity;
   let discount = 0;
 
-  if (quantity >= 4) {
+  if (quantity >= 5) {
+    discount = baseTotal * PRICE_CONFIG.DISCOUNTS[5];
+  } else if (quantity === 4) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[4];
-  } else if (quantity >= 3) {
+  } else if (quantity === 3) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[3];
-  } else if (quantity >= 2) {
+  } else if (quantity === 2) {
     discount = baseTotal * PRICE_CONFIG.DISCOUNTS[2];
   }
 
-  const discountPercent = quantity >= 4 ? 10 : quantity >= 3 ? 7 : quantity >= 2 ? 5 : 0;
+  const discountPercent = quantity >= 5 ? 20 : quantity === 4 ? 10 : quantity === 3 ? 7 : quantity === 2 ? 5 : 0;
   const total = baseTotal - discount;
 
   return {
@@ -106,7 +108,7 @@ export const getAvailableSeats = (rutaId, fecha) => {
 /**
  * Crea un hold para un asiento
  */
-export const createHold = (rutaId, fecha, asiento, userId) => {
+export const createHold = (rutaId, fecha, asiento, userId, companyName) => {
   const key = makeKey(rutaId, fecha, asiento);
 
   // Verificar si ya existe hold o reserva
@@ -127,6 +129,7 @@ export const createHold = (rutaId, fecha, asiento, userId) => {
     fecha,
     asiento,
     userId,
+    companyName: companyName || null,
     createdAt: now,
     expiresAt,
   });
@@ -159,6 +162,7 @@ export const getHolds = () => {
         fecha: hold.fecha,
         asiento: hold.asiento,
         userId: hold.userId,
+        companyName: hold.companyName,
         expiresAt: hold.expiresAt,
         remainingMs,
       });
