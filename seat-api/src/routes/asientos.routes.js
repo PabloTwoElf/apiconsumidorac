@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getAvailableSeats,
+  getViewModel,
   createHold,
   getHolds,
   releaseHold,
@@ -33,6 +34,75 @@ const router = express.Router();
  *         description: Parámetros faltantes
  */
 router.get('/disponibles', getAvailableSeats);
+
+/**
+ * @swagger
+ * /api/asientos/view-model:
+ *   get:
+ *     summary: View Model completo del mapa de asientos para la UI
+ *     description: >
+ *       Endpoint unificado que reemplaza las llamadas paralelas a /disponibles + /holds.
+ *       Retorna todos los asientos con estado: disponible | en_hold | miHold | ocupado.
+ *       Pasar userId para identificar los holds propios del usuario.
+ *     parameters:
+ *       - in: query
+ *         name: rutaId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: fecha
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: userId
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: ID del usuario para marcar sus propios holds como 'miHold'
+ *     responses:
+ *       200:
+ *         description: View Model completo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:
+ *                   type: boolean
+ *                 rutaId:
+ *                   type: string
+ *                 fecha:
+ *                   type: string
+ *                 totalAsientos:
+ *                   type: number
+ *                 asientos:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       numero:
+ *                         type: number
+ *                       estado:
+ *                         type: string
+ *                         enum: [disponible, en_hold, miHold, ocupado]
+ *                       holdId:
+ *                         type: string
+ *                         nullable: true
+ *                       expiresAt:
+ *                         type: number
+ *                         nullable: true
+ *                       remainingMs:
+ *                         type: number
+ *                         nullable: true
+ *                 resumen:
+ *                   type: object
+ *       400:
+ *         description: Parámetros faltantes
+ */
+router.get('/view-model', getViewModel);
 
 /**
  * @swagger
@@ -84,6 +154,7 @@ router.get('/holds', getHolds);
  * /api/asientos/holds:
  *   delete:
  *     summary: Libera un hold manualmente
+ *     description: Acepta holdId (preferido) o la combinación rutaId+fecha+asiento.
  *     requestBody:
  *       required: true
  *       content:
@@ -91,6 +162,9 @@ router.get('/holds', getHolds);
  *           schema:
  *             type: object
  *             properties:
+ *               holdId:
+ *                 type: string
+ *                 description: Preferido. ID único del hold a liberar.
  *               rutaId:
  *                 type: string
  *               fecha:
@@ -98,10 +172,6 @@ router.get('/holds', getHolds);
  *                 format: date
  *               asiento:
  *                 type: number
- *             required:
- *               - rutaId
- *               - fecha
- *               - asiento
  *     responses:
  *       200:
  *         description: Hold liberado exitosamente
