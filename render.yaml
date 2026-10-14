@@ -1,23 +1,58 @@
+# Despliegue alternativo en Render (servidor Node persistente).
+#
+# Vercel es el despliegue principal del API: ver seat-api/vercel.json.
+# Render sirve cuando se necesita que el inventario en memoria sea consistente,
+# porque mantiene un único proceso vivo en lugar de varias instancias
+# serverless independientes.
+#
+# Las credenciales de PayPal NO van aquí: se configuran en el panel de Render
+# como variables secretas (sync: false pide el valor al crear el servicio).
+
 services:
   - type: web
     name: seat-api
-    env: node
+    runtime: node
     plan: free
     rootDir: seat-api
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
+    healthCheckPath: /health
     envVars:
-      - key: PORT
-        value: 5000
       - key: NODE_ENV
         value: production
       - key: SEAT_HOLD_TTL_MS
-        value: 600000
+        value: "600000"
       - key: PURGE_INTERVAL_MS
-        value: 120000
+        value: "120000"
+      - key: TOTAL_SEATS
+        value: "40"
+      - key: BASE_PRICE
+        value: "50000"
+      - key: PRICE_CURRENCY
+        value: COP
+      - key: MAX_SEATS_PER_BOOKING
+        value: "10"
+      - key: CORPORATE_DISCOUNT_FROM
+        value: "5"
+      - key: PAYMENT_CURRENCY
+        value: USD
+      - key: PAYMENT_FX_RATE
+        value: "4000"
+      - key: PAYPAL_MODE
+        value: sandbox
+      - key: PAYPAL_BRAND_NAME
+        value: CulturalTrip
       - key: ALLOWED_ORIGINS
-        scope: run
         value: https://apiconsumidorac.vercel.app
       - key: PUBLIC_BASE_URL
-        scope: run
-        value: ${RENDER_EXTERNAL_URL}
+        fromService:
+          type: web
+          name: seat-api
+          property: host
+      # Secretos: Render los solicita al crear el servicio y no se versionan.
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false

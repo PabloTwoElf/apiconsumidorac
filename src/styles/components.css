@@ -1,0 +1,1141 @@
+/**
+ * Clases de los componentes.
+ *
+ * Todo consume los tokens de tokens.css; aquí no hay colores literales salvo
+ * los tintes de estado, que son semánticos y no cambian con el tema.
+ */
+
+/* ============================================================
+   Cristal — la primitiva que comparten todos los paneles
+   ============================================================ */
+
+.glass {
+  background: var(--glass-1);
+  backdrop-filter: blur(var(--blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(160%);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-2);
+}
+
+.glass--flat {
+  background: var(--glass-2);
+  box-shadow: var(--lift-1);
+  border-radius: var(--r-md);
+}
+
+/* Sin soporte de backdrop-filter el texto quedaría ilegible sobre la aurora,
+   así que los paneles pasan a ser casi opacos. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass--flat,
+  .seat,
+  .pill,
+  .toast {
+    background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  }
+}
+
+/* ============================================================
+   Estructura
+   ============================================================ */
+
+.app {
+  min-height: 100vh;
+  padding: 0 var(--gutter) 72px;
+}
+
+.shell {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail);
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 1040px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rail {
+  display: grid;
+  gap: 18px;
+  position: sticky;
+  top: 90px;
+}
+
+@media (max-width: 1040px) {
+  .rail {
+    position: static;
+  }
+}
+
+/* ============================================================
+   Barra superior
+   ============================================================ */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 14px var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--edge);
+  margin-bottom: 22px;
+}
+
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar__logo {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 21px;
+  border-radius: var(--r-md);
+  background: var(--accent-grad-soft);
+  border: 1px solid var(--edge-strong);
+  box-shadow: var(--lift-1);
+}
+
+.topbar__name {
+  font-size: 1.02rem;
+  font-weight: 640;
+}
+
+.topbar__tag {
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+}
+
+.topbar__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   Píldoras de estado
+   ============================================================ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 560;
+  white-space: nowrap;
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ink-faint);
+}
+
+.pill__dot--ok {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.18);
+}
+.pill__dot--warn {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.18);
+}
+.pill__dot--bad {
+  background: var(--bad);
+  box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.18);
+}
+.pill__dot--live {
+  animation: beat 2s var(--ease) infinite;
+}
+
+@keyframes beat {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================================
+   Paneles
+   ============================================================ */
+
+.panel {
+  padding: 20px;
+}
+
+.panel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel__title {
+  font-size: 0.96rem;
+  font-weight: 620;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel__sub {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.panel__aside {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Campos y botones
+   ============================================================ */
+
+.field {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field__label {
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.field__hint {
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+}
+
+.input {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 0.87rem;
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-sm);
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.input:hover {
+  border-color: var(--edge-strong);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--sky-deep);
+  background: var(--glass-3);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14);
+}
+
+.input::placeholder {
+  color: var(--ink-faint);
+}
+
+.input--invalid {
+  border-color: var(--bad);
+}
+
+/* El selector de fecha nativo trae un icono oscuro que desaparece en el tema
+   oscuro; se invierte para que siga siendo visible. */
+:root:not([data-theme='light']) .input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-size: 0.84rem;
+  font-weight: 570;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--edge);
+  background: var(--glass-2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease), background var(--fast) var(--ease),
+    border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--glass-3);
+  border-color: var(--edge-strong);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: #061020;
+  font-weight: 640;
+  box-shadow: var(--lift-1);
+}
+
+:root[data-theme='light'] .btn--primary {
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--accent-grad);
+  filter: brightness(1.1);
+  box-shadow: var(--glow-sky);
+}
+
+.btn--danger {
+  color: var(--bad);
+  border-color: rgba(251, 113, 133, 0.34);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.btn--icon {
+  padding: 9px;
+  aspect-ratio: 1;
+}
+
+/* ============================================================
+   Controles del viaje
+   ============================================================ */
+
+.trip {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 560px) {
+  .trip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .trip > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ============================================================
+   El bus
+   ============================================================ */
+
+.bus__screen {
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 18px;
+  font-size: 0.71rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-md);
+  /* Trapecio sutil: sugiere el parabrisas y orienta el mapa. */
+  clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+}
+
+.bus__rows {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.row__num {
+  width: 16px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.66rem;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.row__side {
+  display: flex;
+  gap: 9px;
+}
+
+.row__aisle {
+  width: 26px;
+  flex-shrink: 0;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+}
+
+.row__aisle i {
+  width: 2px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--ink-faint);
+  opacity: 0.4;
+}
+
+/* --- Asiento --- */
+
+.seat {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  padding: 0;
+  border-radius: var(--r-md);
+  border: 1px solid var(--edge);
+  background: var(--glass-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--lift-1);
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease), box-shadow var(--fast) var(--ease),
+    border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+
+.seat__num {
+  font-size: 0.82rem;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.seat__pos {
+  font-size: 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1;
+}
+
+.seat:hover:not(:disabled) {
+  transform: translateY(-3px);
+  border-color: var(--sky);
+  box-shadow: var(--lift-2);
+}
+
+.seat:disabled {
+  cursor: not-allowed;
+}
+
+.seat--sel {
+  background: var(--accent-grad);
+  border-color: transparent;
+  box-shadow: var(--glow-sky);
+  transform: scale(1.06);
+}
+
+.seat--sel .seat__num,
+.seat--sel .seat__pos {
+  color: #061020;
+}
+
+:root[data-theme='light'] .seat--sel .seat__num,
+:root[data-theme='light'] .seat--sel .seat__pos {
+  color: #fff;
+}
+
+.seat--mine {
+  background: rgba(74, 222, 128, 0.2);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.seat--held {
+  background: rgba(251, 191, 36, 0.17);
+  border-color: rgba(251, 191, 36, 0.4);
+  opacity: 0.7;
+}
+
+.seat--taken {
+  background: rgba(251, 113, 133, 0.15);
+  border-color: rgba(251, 113, 133, 0.34);
+  opacity: 0.55;
+}
+
+/* Marca de esquina para los asientos ya pagados: el color por sí solo no
+   basta para quien no lo distingue. */
+.seat--taken::after,
+.seat--mine::after {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 0.5rem;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.seat--taken::after {
+  content: '✕';
+  color: var(--bad);
+}
+
+.seat--mine::after {
+  content: '✓';
+  color: var(--ok);
+}
+
+/* --- Leyenda y recuento --- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--edge);
+  font-size: 0.74rem;
+  color: var(--ink-soft);
+}
+
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.swatch {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1px solid var(--edge);
+}
+
+.swatch--free {
+  background: var(--glass-3);
+}
+.swatch--sel {
+  background: var(--accent-grad);
+  border-color: transparent;
+}
+.swatch--mine {
+  background: rgba(74, 222, 128, 0.42);
+}
+.swatch--held {
+  background: rgba(251, 191, 36, 0.42);
+}
+.swatch--taken {
+  background: rgba(251, 113, 133, 0.42);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.stat {
+  flex: 1 1 88px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  text-align: center;
+}
+
+.stat__value {
+  font-size: 1.22rem;
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.stat__label {
+  font-size: 0.67rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+/* ============================================================
+   Carrito
+   ============================================================ */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border-radius: var(--r-sm);
+  font-size: 0.78rem;
+  font-weight: 580;
+  font-variant-numeric: tabular-nums;
+  background: var(--accent-grad-soft);
+  border: 1px solid var(--edge-strong);
+}
+
+.tag--static {
+  padding: 4px 10px;
+}
+
+.tag__remove {
+  all: unset;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  opacity: 0.55;
+  transition: opacity var(--fast), background var(--fast);
+}
+
+.tag__remove:hover {
+  opacity: 1;
+  background: var(--glass-3);
+}
+
+/* --- Desglose de precio --- */
+
+.price {
+  display: grid;
+  gap: 7px;
+  font-size: 0.83rem;
+}
+
+.price__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price__row dt {
+  color: var(--ink-faint);
+}
+
+.price__row dd {
+  font-variant-numeric: tabular-nums;
+  font-weight: 540;
+}
+
+.price__row--save dt,
+.price__row--save dd {
+  color: var(--ok);
+}
+
+.price__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 13px;
+  border-top: 1px solid var(--edge);
+}
+
+.price__total-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.price__amount {
+  font-size: 1.42rem;
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  background: var(--accent-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.price__charge {
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: var(--ink-faint);
+  text-align: right;
+}
+
+/* ============================================================
+   Pasos del flujo
+   ============================================================ */
+
+.stepper {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px;
+}
+
+.stepper__item {
+  position: relative;
+  padding: 0 0 15px 32px;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+}
+
+.stepper__item::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 21px;
+  bottom: 0;
+  width: 1px;
+  background: var(--edge);
+}
+
+.stepper__item:last-child {
+  padding-bottom: 0;
+}
+
+.stepper__item:last-child::before {
+  display: none;
+}
+
+.stepper__dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+}
+
+.stepper__item--done {
+  color: var(--ink-soft);
+}
+
+.stepper__item--done .stepper__dot {
+  background: rgba(74, 222, 128, 0.26);
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.stepper__item--active {
+  color: var(--ink);
+  font-weight: 560;
+}
+
+.stepper__item--active .stepper__dot {
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: #061020;
+  box-shadow: var(--glow-sky);
+}
+
+:root[data-theme='light'] .stepper__item--active .stepper__dot {
+  color: #fff;
+}
+
+/* ============================================================
+   Temporizador del bloqueo
+   ============================================================ */
+
+.timer {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  margin-bottom: 16px;
+}
+
+.timer--urgent {
+  border-color: rgba(251, 113, 133, 0.45);
+  background: rgba(251, 113, 133, 0.1);
+}
+
+.timer__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.timer__label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.timer__clock {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.04rem;
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+}
+
+.timer--urgent .timer__clock {
+  color: var(--bad);
+}
+
+.timer__track {
+  height: 4px;
+  border-radius: 99px;
+  background: var(--glass-3);
+  overflow: hidden;
+}
+
+.timer__fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent-grad);
+  /* Se anima el ancho, no transform, para que el relleno no se deforme. */
+  transition: width 1s linear;
+}
+
+.timer--urgent .timer__fill {
+  background: linear-gradient(90deg, var(--bad), #f97316);
+}
+
+/* ============================================================
+   Avisos
+   ============================================================ */
+
+.alert {
+  display: flex;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  font-size: 0.81rem;
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  overflow-wrap: anywhere;
+}
+
+.alert__icon {
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.alert--ok {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.1);
+}
+.alert--warn {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.1);
+}
+.alert--bad {
+  border-color: rgba(251, 113, 133, 0.4);
+  background: rgba(251, 113, 133, 0.1);
+}
+
+/* ============================================================
+   Avisos flotantes
+   ============================================================ */
+
+.toasts {
+  position: fixed;
+  right: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 90;
+  display: grid;
+  gap: 9px;
+  width: min(360px, calc(100vw - var(--gutter) * 2));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  font-size: 0.82rem;
+  background: var(--glass-3);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--edge);
+  box-shadow: var(--lift-3);
+  pointer-events: auto;
+  animation: toast-in var(--med) var(--ease);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+.toast--ok {
+  border-left: 3px solid var(--ok);
+}
+.toast--warn {
+  border-left: 3px solid var(--warn);
+}
+.toast--bad {
+  border-left: 3px solid var(--bad);
+}
+
+.toast__body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.toast__title {
+  font-weight: 600;
+  margin-bottom: 1px;
+}
+
+.toast__text {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.toast__close {
+  all: unset;
+  cursor: pointer;
+  opacity: 0.45;
+  padding: 0 2px;
+  font-size: 0.8rem;
+}
+
+.toast__close:hover {
+  opacity: 1;
+}
+
+/* ============================================================
+   Estados vacíos y de carga
+   ============================================================ */
+
+.empty {
+  text-align: center;
+  padding: 26px 16px;
+  color: var(--ink-faint);
+  font-size: 0.83rem;
+}
+
+.empty__icon {
+  font-size: 1.7rem;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.skeleton {
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--glass-1), var(--glass-3), var(--glass-1));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton--seat {
+  width: 48px;
+  height: 48px;
+}
+
+.spin {
+  display: inline-block;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   Comprobante
+   ============================================================ */
+
+.receipt {
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.receipt__seal {
+  width: 56px;
+  height: 56px;
+  margin: 2px auto 0;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  border-radius: 50%;
+  background: rgba(74, 222, 128, 0.18);
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  animation: pop var(--med) var(--ease);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+
+.receipt__title {
+  font-size: 1.04rem;
+  font-weight: 640;
+}
+
+.receipt__meta {
+  display: grid;
+  gap: 6px;
+  padding: 13px;
+  border-radius: var(--r-md);
+  background: var(--glass-2);
+  border: 1px solid var(--edge);
+  font-size: 0.79rem;
+  text-align: left;
+}
+
+.receipt__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receipt__row dt {
+  color: var(--ink-faint);
+}
+
+.receipt__row dd {
+  font-weight: 540;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+/* ============================================================
+   Zona de pago
+   ============================================================ */
+
+.paypal {
+  margin-top: 4px;
+  /* El SDK de PayPal pinta un iframe con fondo propio; el radio lo recorta
+     para que no rompa el lenguaje redondeado del resto. */
+  border-radius: var(--r-md);
+  overflow: hidden;
+  min-height: 46px;
+}
+
+.paypal--loading {
+  display: grid;
+  place-items: center;
+  color: var(--ink-faint);
+  font-size: 0.78rem;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--edge);
+}
+
+/* ============================================================
+   Utilidades
+   ============================================================ */
+
+.row-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--ink-faint);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

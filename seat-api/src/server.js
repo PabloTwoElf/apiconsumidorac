@@ -1,306 +1,98 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import swaggerJsdoc from "swagger-jsdoc";
-import swaggerUi from "swagger-ui-express";
-import asientosRoutes from "./routes/asientos.routes.js";
-import * as asientosService from "./services/asientos.service.js";
-
-dotenv.config();
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-const NODE_ENV = process.env.NODE_ENV || "development";
-const PURGE_INTERVAL_MS = parseInt(process.env.PURGE_INTERVAL_MS || "120000", 10);
-
-// ======================
-// CORS (FIXED)
-// ======================
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
-  : [];
-
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Permitir requests sin origin (Postman/curl)
-      if (!origin) return cb(null, true);
-
-      // En desarrollo, si no configuraste ALLOWED_ORIGINS, permite todo
-      if (NODE_ENV === "development" && allowedOrigins.length === 0) {
-        return cb(null, true);
-      }
-
-      // En producción: solo orígenes permitidos
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-
-      return cb(new Error("CORS bloqueado para este origen: " + origin), false);
-    },
-    credentials: true,
-    optionsSuccessStatus: 200,
-  })
-);
-
-app.use(express.json());
-
-// ======================
-// Ruta principal → Swagger
-// ======================
-app.get("/", (req, res) => {
-  res.redirect("/api-docs");
-});
-
-// ======================
-// Swagger (FIXED server url)
-// ======================
-const swaggerOptions = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "Seat Availability API",
-      version: "1.0.0",
-      description: "API REST para gestión de disponibilidad de asientos con holds y reservas",
-      contact: { name: "API Support" },
-    },
-    servers: [
-      {
-        url: process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`,
-        description: "API server",
-      },
-    ],
-    components: {
-      schemas: {
-        ErrorResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean", example: false },
-            error: { type: "string" },
-          },
-        },
-        HealthResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean", example: true },
-          },
-        },
-        AvailableSeatsResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean" },
-            rutaId: { type: "string" },
-            fecha: { type: "string", format: "date" },
-            ttlMs: { type: "number" },
-            asientos: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  numero: { type: "number" },
-                  estado: { type: "string", enum: ["available", "held", "reserved"] },
-                  expiresAt: { type: "number" },
-                },
-              },
-            },
-            available: { type: "array", items: { type: "number" } },
-            total: { type: "number" },
-          },
-        },
-        HoldResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean" },
-            holdId: { type: "string" },
-            expiresAt: { type: "number" },
-            remainingMs: { type: "number" },
-          },
-        },
-        HoldsListResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean" },
-            holds: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  holdId: { type: "string" },
-                  rutaId: { type: "string" },
-                  fecha: { type: "string", format: "date" },
-                  asiento: { type: "number" },
-                  userId: { type: "string" },
-                  expiresAt: { type: "number" },
-                  remainingMs: { type: "number" },
-                },
-              },
-            },
-            count: { type: "number" },
-          },
-        },
-        ConfirmResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean" },
-            reservedAt: { type: "number" },
-          },
-        },
-      },
-    },
-  },
-  apis: ["./src/routes/*.js"],
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
-
-// Ruta principal → Swagger UI
-app.get("/", (req, res) => {
-  res.redirect("/api-docs");
-});
-
-// Swagger endpoints
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
-
-// ======================
-// Routes
-// ======================
+import { createApp } from './infrastructure/http/app.js';
+import { env, configWarnings } from './infrastructure/config/env.js';
 
 /**
- * @swagger
- * /health:
- *   get:
- *     summary: Health check
- *     responses:
- *       200:
- *         description: Server is running
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HealthResponse'
+ * Arranque para entornos con servidor persistente (desarrollo local, Render,
+ * Railway, un contenedor...).
+ *
+ * Vercel NO usa este archivo: allí el punto de entrada es api/index.js, que
+ * exporta la app sin escucharla. Llamar a listen() en una función serverless
+ * hace que el despliegue se quede sin responder, y era una de las causas de que
+ * el despliegue anterior no funcionara.
  */
-app.get("/health", (req, res) => res.json({ ok: true }));
+const { app, container } = createApp();
 
-// ======================
-// ENDPOINT PRINCIPAL: CALCULAR PRECIO CON DESCUENTOS
-// ======================
-/**
- * @swagger
- * /calcular-precio:
- *   post:
- *     summary: Calcula precio total con descuentos automáticos
- *     tags:
- *       - Cálculos de Precio
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               cantidad:
- *                 type: number
- *                 example: 3
- *                 description: Cantidad de asientos
- *     responses:
- *       200:
- *         description: Cálculo exitoso
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 ok:
- *                   type: boolean
- *                 cantidad:
- *                   type: number
- *                 precioUnitario:
- *                   type: number
- *                 subtotal:
- *                   type: number
- *                 porcentajeDescuento:
- *                   type: number
- *                 montoDescuento:
- *                   type: number
- *                 total:
- *                   type: number
- *                 ahorros:
- *                   type: string
- */
-app.post("/calcular-precio", (req, res) => {
+// La purga periódica solo tiene sentido con un proceso que vive. En serverless
+// cada caso de uso purga lo que necesita al empezar, así que no se pierde nada.
+const purgeTimer = setInterval(() => {
   try {
-    const { cantidad } = req.body;
-    
-    if (!cantidad || cantidad < 1) {
-      return res.status(400).json({ 
-        ok: false, 
-        error: "Cantidad debe ser mayor a 0" 
-      });
-    }
-
-    const pricing = asientosService.calculatePrice(cantidad);
-    
-    res.json({
-      ok: true,
-      cantidad: pricing.quantity,
-      precioUnitario: pricing.basePrice,
-      subtotal: pricing.baseTotal,
-      porcentajeDescuento: pricing.discountPercent,
-      montoDescuento: pricing.discountAmount,
-      total: pricing.total,
-      ahorros: pricing.savings,
-    });
+    const purged = container.seatRepository.purgeExpiredHolds(Date.now());
+    if (purged > 0) console.log(`[purga] ${purged} bloqueo(s) expirado(s) eliminado(s)`);
   } catch (error) {
-    console.error("Error en /calcular-precio:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    console.error('[purga] error:', error.message);
   }
-});
+}, env.PURGE_INTERVAL_MS);
 
-// API Routes
-app.use("/api/asientos", asientosRoutes);
+// Sin unref, el temporizador mantendría el proceso vivo tras cerrar el servidor.
+purgeTimer.unref();
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ ok: false, error: "Endpoint not found" });
-});
+/**
+ * Arranca en el primer puerto libre a partir del configurado.
+ *
+ * Si el puerto está ocupado, lo normal sería abortar con EADDRINUSE y obligar a
+ * editar el .env. En su lugar se prueba el siguiente: el frontend descubre el
+ * puerto al arrancar (ver vite.config.ts) y `npm run puertos` lo imprime, así
+ * que no hay nada que actualizar a mano.
+ */
+const listenOnFreePort = (startPort, attempts = 10) =>
+  new Promise((resolve, reject) => {
+    const tryPort = (port, left) => {
+      const srv = app.listen(port);
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ ok: false, error: err.message || "Internal server error" });
-});
+      srv.once('listening', () => resolve(srv));
+      srv.once('error', (error) => {
+        if (error.code !== 'EADDRINUSE' || left === 0) return reject(error);
+        console.log(`[arranque] El puerto ${port} está ocupado; probando el ${port + 1}…`);
+        tryPort(port + 1, left - 1);
+      });
+    };
 
-// ======================
-// Purge expired holds
-// ======================
-setInterval(() => {
-  try {
-    const purged = asientosService.purgeExpiredHolds();
-    if (purged > 0) console.log(`[Purge] Removed ${purged} expired holds`);
-  } catch (e) {
-    console.error("[Purge] error:", e?.message || e);
-  }
-}, PURGE_INTERVAL_MS);
+    tryPort(startPort, attempts);
+  });
 
-// Start server
-app.listen(PORT, () => {
-  const corsInfo =
-    allowedOrigins.length > 0
-      ? allowedOrigins.join(", ")
-      : NODE_ENV === "development"
-      ? "(dev) allow all"
-      : "(prod) none configured";
+const server = await listenOnFreePort(env.PORT);
+const port = server.address().port;
+
+// PUBLIC_BASE_URL se calculó con el puerto configurado; si acabamos en otro,
+// las URLs que se imprimen y las que recibe PayPal deben reflejar el real.
+const baseUrl = env.PUBLIC_BASE_URL.replace(`:${env.PORT}`, `:${port}`);
+
+{
+  const warnings = configWarnings();
 
   console.log(`
-╔════════════════════════════════════════╗
-║   Seat Availability API                ║
-║   Node.js ${process.version.split(".")[0]}+ | Express      ║
-╚════════════════════════════════════════╝
+╔══════════════════════════════════════════════╗
+║  CulturalTrip · Seat API  v2.0.0             ║
+║  Arquitectura hexagonal + MVC                ║
+╚══════════════════════════════════════════════╝
 
-🚀 Server running on port ${PORT}
-📚 Documentation: ${process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`}/api-docs
-🏥 Health check: ${process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`}/health
-🌍 Environment: ${NODE_ENV}
-🔒 CORS Origins: ${corsInfo}
-⏱️  Hold TTL: ${process.env.SEAT_HOLD_TTL_MS || 600000}ms
-🧹 Purge interval: ${PURGE_INTERVAL_MS}ms
-  `);
-});
+  Puerto         ${port}${port !== env.PORT ? `  (el ${env.PORT} estaba ocupado)` : ''}
+
+  Panel          ${baseUrl}/
+  Documentación  ${baseUrl}/api-docs
+  Salud          ${baseUrl}/health
+  Diagnóstico    ${baseUrl}/api/sistema/diagnostico
+
+  Entorno        ${env.NODE_ENV}  ·  Node ${process.version}
+  CORS           ${
+    env.NODE_ENV !== 'production'
+      ? '(dev) cualquier puerto de localhost'
+      : env.ALLOWED_ORIGINS.join(', ') || 'NINGUNO configurado'
+  }
+  Retorno        ${env.APP_RETURN_BASE_URL ? env.APP_RETURN_BASE_URL + env.APP_RETURN_PATH : 'según el origen de cada orden'}
+  Hold TTL       ${Math.round(env.SEAT_HOLD_TTL_MS / 60000)} min
+  Precio         ${env.BASE_PRICE.toLocaleString('es-CO')} ${env.PRICE_CURRENCY} / asiento
+  PayPal         ${env.PAYPAL_MODE}${env.PAYPAL_CLIENT_ID ? ' · credenciales presentes' : ' · SIN credenciales'}
+${warnings.length > 0 ? `\n  Avisos:\n${warnings.map((w) => `   ⚠ ${w}`).join('\n')}\n` : ''}`);
+}
+
+// Cierre ordenado: sin esto, un reinicio deja el puerto ocupado unos segundos.
+const shutdown = (signal) => {
+  console.log(`\n[${signal}] Cerrando el servidor…`);
+  clearInterval(purgeTimer);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

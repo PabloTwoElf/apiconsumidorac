@@ -1,377 +1,188 @@
-# Seat Availability API
+# CulturalTrip · Seat API
 
-API REST para gestión de disponibilidad de asientos con hold (bloqueos temporales) y reservas confirmadas.
+API REST de disponibilidad de asientos con bloqueos temporales (*holds*),
+reservas confirmadas y pasarela de pago **PayPal Sandbox** orquestada de extremo
+a extremo.
 
-## Instalación
+Arquitectura **hexagonal (puertos y adaptadores)** con **MVC** en la capa HTTP.
+
+> El contexto completo del proyecto — diagnóstico del despliegue, decisiones de
+> diseño, flujo de pago y limitaciones — está en
+> [`../CONTEXTO-PROYECTO.md`](../CONTEXTO-PROYECTO.md).
+
+---
+
+## Arranque
 
 ```bash
-# Instalar dependencias
 npm install
-
-# Crear archivo .env
-cp .env.example .env
+cp .env.example .env     # solo hay que rellenar las credenciales de PayPal
+npm run dev
 ```
 
-## Configuración
+Arranca en el `PORT` configurado (5008 por defecto) o, si está ocupado, en el
+siguiente libre. El arranque imprime el puerto real; desde la raíz del
+repositorio, `npm run puertos` también lo dice.
 
-Edita `.env`:
-
-```env
-PORT=5000
-NODE_ENV=development
-SEAT_HOLD_TTL_MS=600000        # 10 minutos - Duración máxima de un hold
-PURGE_INTERVAL_MS=120000        # 2 minutos - Intervalo de limpieza de holds expirados
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-- `SEAT_HOLD_TTL_MS`: Tiempo en milisegundos que un hold permanece activo (default: 600000ms = 10min)
-- `PURGE_INTERVAL_MS`: Intervalo de limpieza automática de holds expirados (default: 120000ms = 2min)
-- `ALLOWED_ORIGINS`: URLs permitidas por CORS (separadas por comas). En desarrollo sin configurar acepta `*`
+| URL | Qué es |
+|---|---|
+| `/` | Panel glassmorphism: estado del despliegue y demostración del flujo |
+| `/api-docs` | Documentación Swagger interactiva |
+| `/health` | Comprobación de salud |
+| `/api/sistema/diagnostico` | Estado completo (entorno, precios, inventario, pasarela) |
+| `/api/sistema/paypal` | Verifica las credenciales pidiendo un token OAuth2 real |
 
 ## Scripts
 
 ```bash
-# Desarrollo (con reinicio automático)
-npm run dev
-
-# Producción
-npm start
+npm run dev      # desarrollo con recarga automática
+npm start        # producción (servidor persistente)
+npm run smoke          # 30 comprobaciones del flujo completo, PayPal incluido
+npm run smoke:reportes # informes del tablero gerencial
+npm run smoke:all      # las dos
+npm run build    # comprueba la sintaxis de los puntos de entrada
 ```
 
-## Documentación de API
+---
 
-Una vez iniciado el servidor, accede a:
-- **Swagger UI**: http://localhost:5000/api-docs
-- **JSON OpenAPI**: http://localhost:5000/api-docs.json
+## Estructura
+
+```
+api/index.js          ← entrada Vercel: EXPORTA la app, no la escucha
+src/server.js         ← entrada local/Render: la escucha en un puerto
+
+src/domain/           Núcleo. Sin dependencias externas.
+  model/                Seat · Hold · Reservation · PaymentOrder · Money
+  services/             PricingPolicy · SeatLayout
+  ports/                contratos hacia persistencia, pagos y reloj
+  errors/               errores con código semántico
+
+src/application/      Casos de uso: un archivo por operación del negocio.
+  use-cases/
+
+src/infrastructure/   Adaptadores: lo intercambiable.
+  config/               env + container.js (la raíz de composición)
+  persistence/          InMemorySeatRepository · InMemoryOrderRepository
+  payments/             PayPalPaymentGateway
+  http/                 ← aquí vive el MVC
+    controllers/          (C) traducen HTTP ↔ casos de uso
+    routes/                   URLs + anotaciones OpenAPI
+    views/                (V) panel glassmorphism
+    middlewares/              CORS · errores
+```
+
+La regla que organiza todo: **las dependencias apuntan hacia dentro.** El
+dominio no sabe que existe Express, ni PayPal, ni que los datos viven en un
+`Map`.
+
+Para cambiar de almacenamiento o de pasarela se edita **únicamente**
+`src/infrastructure/config/container.js`.
+
+---
+
+## Flujo de compra
+
+```
+① POST /api/asientos/reservar        → holdIds
+② POST /api/checkout/crear-orden     → orderId + approvalUrl   (sin importe)
+③ el comprador aprueba en PayPal
+④ POST /api/checkout/capturar-orden  → cobra y confirma los asientos
+```
+
+El importe **nunca** viene del cliente: se recalcula en el servidor a partir de
+los `holdIds` verificados. El paso ④ es idempotente.
+
+---
 
 ## Endpoints
 
-### 1. GET /health
-Health check simple.
+### Asientos
 
-**Respuesta:**
-```json
-{ "ok": true }
+| Método | Ruta |
+|---|---|
+| `GET` | `/api/asientos/view-model` — **recomendado**, mapa completo en una llamada |
+| `GET` | `/api/asientos/disponibles` — contrato original, por compatibilidad |
+| `POST` | `/api/asientos/reservar` — bloquear uno o varios asientos |
+| `GET` | `/api/asientos/holds` — listar bloqueos activos |
+| `DELETE` | `/api/asientos/holds` — liberar (idempotente) |
+| `POST` | `/api/asientos/reservar-definitivo` — confirmar sin pago en línea |
+| `POST` | `/calcular-precio` — cotizar N asientos |
+
+### Checkout PayPal
+
+| Método | Ruta |
+|---|---|
+| `GET` | `/api/checkout/configuracion` |
+| `POST` | `/api/checkout/crear-orden` |
+| `POST` | `/api/checkout/capturar-orden` |
+| `GET` | `/api/checkout/orden/:orderId` |
+| `POST` | `/api/checkout/webhook` |
+
+### Estados en `view-model`
+
+| Estado | Significado |
+|---|---|
+| `disponible` | Libre |
+| `miHold` | Bloqueado por el `userId` consultado (incluye su `holdId`) |
+| `en_hold` | Bloqueado por otro comprador (sin `holdId`) |
+| `ocupado` | Reserva confirmada |
+
+---
+
+## Precios
+
+| Asientos | Descuento | Total (COP) | Cobro (USD) |
+|---|---|---|---|
+| 1 | — | 50 000 | 12.50 |
+| 2 | 5 % | 95 000 | 23.75 |
+| 3 | 7 % | 139 500 | 34.88 |
+| 4 | 10 % | 180 000 | 45.00 |
+| 5 o más | 20 % · exige razón social | 200 000 (5) | 50.00 |
+
+El negocio cotiza en COP; PayPal Sandbox no liquida en esa moneda, así que
+`Money` convierte con `PAYMENT_FX_RATE` antes de cobrar.
+
+---
+
+## Configuración
+
+Plantilla documentada en [`.env.example`](.env.example). En local solo hacen
+falta dos variables:
+
+```env
+PAYPAL_CLIENT_ID=<tu client id de sandbox>
+PAYPAL_CLIENT_SECRET=<tu secret de sandbox>
 ```
 
-### 2. GET /api/asientos/disponibles
-Obtiene asientos disponibles para una ruta y fecha.
+Las tres que antes había que mantener a mano ya no se tocan:
 
-**Query Parameters:**
-- `rutaId` (required): ID de la ruta
-- `fecha` (required): Fecha en formato YYYY-MM-DD
+| Variable | En local | Por qué |
+|---|---|---|
+| `ALLOWED_ORIGINS` | vacía | Fuera de producción se acepta cualquier puerto de localhost. **Obligatoria en producción** |
+| `APP_RETURN_BASE_URL` | vacía | El destino del retorno se deduce del `Origin` de cada orden y se guarda en ella |
+| `PORT` | 5008 | Si está ocupado, se usa el siguiente libre |
 
-**Respuesta (200):**
-```json
-{
-  "ok": true,
-  "rutaId": "123",
-  "fecha": "2026-01-26",
-  "ttlMs": 600000,
-  "asientos": [
-    { "numero": 1, "estado": "available" },
-    { "numero": 2, "estado": "held", "expiresAt": 1704960600000 },
-    { "numero": 3, "estado": "reserved" }
-  ],
-  "available": [1, 2, 3, 5, 6],
-  "total": 5
-}
-```
+Sin credenciales de PayPal el API **arranca igual**: los endpoints de asientos
+funcionan y los de checkout devuelven `502` explicando qué falta.
 
-**cURL:**
-```bash
-curl "http://localhost:5000/api/asientos/disponibles?rutaId=123&fecha=2026-01-26"
-```
+---
 
-### 3. POST /api/asientos/reservar
-Crea un hold (bloqueo temporal) para un asiento. Retorna un `holdId` que expira en `SEAT_HOLD_TTL_MS`.
+## Despliegue
 
-**Body:**
-```json
-{
-  "rutaId": "123",
-  "fecha": "2026-01-26",
-  "asiento": 5,
-  "userId": "user-456"
-}
-```
+**Vercel, recomendado** — el proyecto de la **raíz** del repositorio sirve este
+API bajo `/api` del mismo dominio que el frontend (ver `../api/index.js`). Las
+variables de entorno se definen ahí, porque es quien ejecuta la función.
 
-**Respuesta (200):**
-```json
-{
-  "ok": true,
-  "holdId": "hold_1704960000000_0.1234",
-  "asiento": 5,
-  "expiresAt": 1704960600000,
-  "remainingMs": 600000,
-  "ttlMs": 600000
-}
-```
+**Vercel, proyecto aparte** — también se puede desplegar solo: Root Directory
+`seat-api`, framework Other. El `vercel.json` de esta carpeta ya está
+configurado y no hace falta paso de build. En ese despliegue `/` muestra el
+panel de diagnóstico.
 
-**Error (409):**
-```json
-{
-  "ok": false,
-  "error": "Seat already occupied or on hold"
-}
-```
+**Render** — usar el `render.yaml` de la raíz del repositorio.
 
-**cURL:**
-```bash
-curl -X POST http://localhost:5000/api/asientos/reservar \
-  -H "Content-Type: application/json" \
-  -d '{
-    "rutaId": "123",
-    "fecha": "2026-01-26",
-    "asiento": 5,
-    "userId": "user-456"
-  }'
-```
+Diferencia importante: en Vercel cada instancia serverless tiene su propia copia
+del inventario en memoria. Para que el estado sea consistente hay que usar
+Render (un solo proceso) o escribir un adaptador de persistencia real.
 
-### 4. GET /api/asientos/holds
-Obtiene lista de todos los holds activos (no expirados) con tiempo restante.
-
-**Respuesta (200):**
-```json
-{
-  "ok": true,
-  "holds": [
-    {
-      "holdId": "hold_1704960000000_0.1234",
-      "rutaId": "123",
-      "fecha": "2026-01-26",
-      "asiento": 5,
-      "userId": "user-456",
-      "expiresAt": 1704960600000,
-      "remainingMs": 598000
-    }
-  ],
-  "count": 1
-}
-```
-
-**cURL:**
-```bash
-curl http://localhost:5000/api/asientos/holds
-```
-
-### 5. DELETE /api/asientos/holds
-Libera manualmente un hold antes de que expire.
-
-**Body:**
-```json
-{
-  "rutaId": "123",
-  "fecha": "2026-01-26",
-  "asiento": 5
-}
-```
-
-**Respuesta (200):**
-```json
-{ "ok": true }
-```
-
-**Error (409):**
-```json
-{
-  "ok": false,
-  "error": "Hold not found"
-}
-```
-
-**cURL:**
-```bash
-curl -X DELETE http://localhost:5000/api/asientos/holds \
-  -H "Content-Type: application/json" \
-  -d '{
-    "rutaId": "123",
-    "fecha": "2026-01-26",
-    "asiento": 5
-  }'
-```
-
-### 6. POST /api/asientos/reservar-definitivo
-Convierte un hold a reserva confirmada (permanente).
-
-**Body:**
-```json
-{
-  "rutaId": "123",
-  "fecha": "2026-01-26",
-  "asiento": 5,
-  "holdId": "hold_1704960000000_0.1234"
-}
-```
-
-**Respuesta (200):**
-```json
-{
-  "ok": true,
-  "reservedAt": 1704960300000
-}
-```
-
-**Error (409):**
-```json
-{
-  "ok": false,
-  "error": "Hold not found or invalid"
-}
-```
-
-**cURL:**
-```bash
-curl -X POST http://localhost:5000/api/asientos/reservar-definitivo \
-  -H "Content-Type: application/json" \
-  -d '{
-    "rutaId": "123",
-    "fecha": "2026-01-26",
-    "asiento": 5,
-    "holdId": "hold_1704960000000_0.1234"
-  }'
-```
-
-## Flujo típico
-
-1. **GET /api/asientos/disponibles** → Ver asientos libres
-2. **POST /api/asientos/reservar** → Crear hold (reserva temporal)
-3. **GET /api/asientos/holds** → Verificar holds activos
-4. **POST /api/asientos/reservar-definitivo** → Confirmar reserva
-5. **(Opcional) DELETE /api/asientos/holds** → Cancelar antes de confirmar
-
-## Consumo desde JavaScript/TypeScript
-
-```typescript
-// Obtener asientos disponibles
-const response = await fetch(
-  'http://localhost:5000/api/asientos/disponibles?rutaId=123&fecha=2026-01-26'
-);
-const data = await response.json();
-console.log(data.available); // [1, 2, 3, 5, ...]
-
-// Crear hold
-const holdResponse = await fetch('http://localhost:5000/api/asientos/reservar', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    rutaId: '123',
-    fecha: '2026-01-26',
-    asiento: 5,
-    userId: 'user-456'
-  })
-});
-const holdData = await holdResponse.json();
-const holdId = holdData.holdId;
-
-// Confirmar reserva
-const confirmResponse = await fetch(
-  'http://localhost:5000/api/asientos/reservar-definitivo',
-  {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      rutaId: '123',
-      fecha: '2026-01-26',
-      asiento: 5,
-      holdId
-    })
-  }
-);
-const confirmData = await confirmResponse.json();
-console.log(confirmData.ok); // true
-```
-
-## Notas
-
-- **Storage en memoria**: Los datos se pierden si se reinicia el servidor
-- **Purga automática**: Se ejecuta cada `PURGE_INTERVAL_MS` y en cada request
-- **CORS**: Por defecto acepta cualquier origen en desarrollo, configurable en `.env`
-- **Asientos**: Simulado con 40 asientos por ruta/fecha
-- **IDs únicos**: `holdId` y `reservedAt` basados en timestamp + UUID
-
-## Despliegue en Render
-
-### Paso 1: Preparar repositorio
-
-```bash
-# En la carpeta seat-api, commit y push
-git add .
-git commit -m "feat: configurar para Render"
-git push origin main
-```
-
-### Paso 2: Crear Web Service en Render
-
-1. Ir a https://dashboard.render.com/
-2. Click en **"New +"** → **"Web Service"**
-3. Seleccionar **"Deploy an existing Git repository"**
-4. Buscar y conectar el repositorio
-
-### Paso 3: Configurar Render
-
-**Build & Deploy Settings:**
-- **Name:** `seat-api`
-- **Environment:** `Node`
-- **Build Command:** `npm install`
-- **Start Command:** `npm start`
-- **Plan:** Free o Starter
-
-**Environment Variables:**
-
-Ir a **Settings** → **Environment** y agregar:
-
-```
-PORT=5000
-NODE_ENV=production
-SEAT_HOLD_TTL_MS=600000
-PURGE_INTERVAL_MS=120000
-ALLOWED_ORIGINS=https://apiconsumidorac.vercel.app
-PUBLIC_BASE_URL=https://seat-api-xxxxx.onrender.com
-```
-
-(Render proporciona la URL automáticamente)
-
-### Paso 4: Deploy y obtener URL
-
-Una vez desplegado, Render te dará una URL como:
-```
-https://seat-api-xxxxx.onrender.com
-```
-
-### Paso 5: Actualizar Frontend
-
-En Vercel (apiconsumidorac):
-
-**Settings → Environment Variables:**
-
-```
-VITE_SEAT_API_URL=https://seat-api-xxxxx.onrender.com
-```
-
-Luego redeploy.
-
-## Notas Importantes para Render
-
-- ⚠️ El plan **Free** duerme después de 15 min sin uso (puede causar retrasos)
-- 💾 **Storage en memoria**: Los datos se pierden al redeploy
-- 🔒 **CORS**: Configurado para permitir solo tu dominio de Vercel
-- 📚 **Swagger**: Disponible en `/api-docs`
-- ⏱️ **Auto-purge**: Se ejecuta cada 2 minutos (ajustable en `PURGE_INTERVAL_MS`)
-
-## Testing en Producción
-
-```bash
-# Health check
-curl https://seat-api-xxxxx.onrender.com/health
-
-# Obtener asientos
-curl "https://seat-api-xxxxx.onrender.com/api/asientos/disponibles?rutaId=123&fecha=2026-01-26"
-
-# Ver Swagger
-https://seat-api-xxxxx.onrender.com/api-docs
-```
-
-## Licencia
-
-ISC
+Pasos detallados y comprobaciones en
+[`../CONTEXTO-PROYECTO.md`](../CONTEXTO-PROYECTO.md).

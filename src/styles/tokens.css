@@ -1,0 +1,108 @@
+/**
+ * Tokens del sistema de diseño.
+ *
+ * Un único sitio donde vive el "cristal". Los componentes solo consumen
+ * variables, así que cambiar el aspecto de toda la aplicación es editar este
+ * archivo y nada más.
+ *
+ * El glassmorphism no es un color: necesita tres cosas a la vez. Un fondo con
+ * color que se transparente, un desenfoque de lo que hay detrás
+ * (`backdrop-filter`) y un borde claro de 1px que haga de canto del cristal.
+ * Quitando cualquiera de las tres, los paneles se ven como tarjetas planas.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* --- Lienzo --- */
+  --bg: #070b18;
+  --bg-elevated: #0b1226;
+
+  /* --- Cristal ---
+     Tres niveles de opacidad: los paneles grandes necesitan menos velo que los
+     controles pequeños, que han de resaltar sobre el panel que los contiene. */
+  --glass-1: rgba(255, 255, 255, 0.055);
+  --glass-2: rgba(255, 255, 255, 0.085);
+  --glass-3: rgba(255, 255, 255, 0.13);
+  --edge: rgba(255, 255, 255, 0.14);
+  --edge-strong: rgba(255, 255, 255, 0.26);
+  --blur: 24px;
+
+  /* --- Texto --- */
+  --ink: #f4f6ff;
+  --ink-soft: rgba(233, 237, 255, 0.66);
+  --ink-faint: rgba(233, 237, 255, 0.42);
+
+  /* --- Acentos --- */
+  --sky: #7dd3fc;
+  --sky-deep: #38bdf8;
+  --violet: #a78bfa;
+  --mint: #5eead4;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --bad: #fb7185;
+
+  --accent-grad: linear-gradient(135deg, rgba(56, 189, 248, 0.9), rgba(167, 139, 250, 0.9));
+  --accent-grad-soft: linear-gradient(135deg, rgba(56, 189, 248, 0.26), rgba(167, 139, 250, 0.26));
+
+  /* --- Relieve ---
+     La sombra interior superior es lo que da el brillo del borde del cristal;
+     sin ella el panel parece un rectángulo translúcido sin volumen. */
+  --lift-1: 0 2px 10px rgba(2, 6, 23, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --lift-2: 0 10px 34px rgba(2, 6, 23, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --lift-3: 0 22px 60px rgba(2, 6, 23, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  --glow-sky: 0 0 0 1px rgba(56, 189, 248, 0.5), 0 8px 26px rgba(56, 189, 248, 0.3);
+
+  /* --- Geometría --- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --gutter: 16px;
+  --rail: 340px;
+
+  /* --- Movimiento --- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --fast: 0.14s;
+  --med: 0.26s;
+}
+
+/**
+ * Tema claro.
+ *
+ * No es una inversión de colores: sobre fondo claro un blanco al 5 %
+ * desaparece, así que el cristal pasa a ser casi opaco y las sombras se
+ * suavizan. Es el ajuste que más se suele olvidar al implementar este estilo.
+ */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #eaeefc;
+  --bg-elevated: #ffffff;
+
+  --glass-1: rgba(255, 255, 255, 0.55);
+  --glass-2: rgba(255, 255, 255, 0.72);
+  --glass-3: rgba(255, 255, 255, 0.88);
+  --edge: rgba(255, 255, 255, 0.95);
+  --edge-strong: rgba(79, 70, 229, 0.22);
+
+  --ink: #0f1733;
+  --ink-soft: rgba(15, 23, 51, 0.68);
+  --ink-faint: rgba(15, 23, 51, 0.45);
+
+  --sky: #0369a1;
+  --sky-deep: #0284c7;
+  --violet: #6d28d9;
+  --mint: #0f766e;
+  --ok: #15803d;
+  --warn: #b45309;
+  --bad: #be123c;
+
+  --accent-grad: linear-gradient(135deg, #0284c7, #7c3aed);
+  --accent-grad-soft: linear-gradient(135deg, rgba(2, 132, 199, 0.16), rgba(124, 58, 237, 0.16));
+
+  --lift-1: 0 2px 10px rgba(49, 46, 129, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --lift-2: 0 10px 34px rgba(49, 46, 129, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --lift-3: 0 22px 60px rgba(49, 46, 129, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --glow-sky: 0 0 0 1px rgba(2, 132, 199, 0.45), 0 8px 26px rgba(2, 132, 199, 0.22);
+}
