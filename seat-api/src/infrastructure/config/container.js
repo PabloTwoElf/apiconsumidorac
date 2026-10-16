@@ -16,6 +16,8 @@ import { ConfirmReservation } from '../../application/use-cases/ConfirmReservati
 import { CalculatePrice } from '../../application/use-cases/CalculatePrice.js';
 import { CreateCheckoutOrder } from '../../application/use-cases/CreateCheckoutOrder.js';
 import { CaptureCheckoutOrder } from '../../application/use-cases/CaptureCheckoutOrder.js';
+import { DeliverOrderSeats } from '../../application/use-cases/DeliverOrderSeats.js';
+import { ReviewPendingPayment } from '../../application/use-cases/ReviewPendingPayment.js';
 import { GetCheckoutOrder } from '../../application/use-cases/GetCheckoutOrder.js';
 import { HandlePaymentWebhook } from '../../application/use-cases/HandlePaymentWebhook.js';
 import { GetSalesReport } from '../../application/use-cases/GetSalesReport.js';
@@ -72,11 +74,13 @@ export const buildContainer = ({ logger = console } = {}) => {
   // ---- Casos de uso ----
   const confirmReservation = new ConfirmReservation({ seatRepository, clock });
 
+  const deliverOrderSeats = new DeliverOrderSeats({ seatRepository, confirmReservation });
+
   const captureCheckoutOrder = new CaptureCheckoutOrder({
     seatRepository,
     orderRepository,
     paymentGateway,
-    confirmReservation,
+    deliverOrderSeats,
     clock,
   });
 
@@ -112,6 +116,12 @@ export const buildContainer = ({ logger = console } = {}) => {
       captureCheckoutOrder,
       clock,
       logger,
+    }),
+    reviewPendingPayment: new ReviewPendingPayment({
+      orderRepository,
+      seatRepository,
+      deliverOrderSeats,
+      clock,
     }),
     getSalesReport: new GetSalesReport({ orderRepository, seatRepository, salesReport, clock }),
     getMerchantAccount: new GetMerchantAccount({ paymentGateway }),

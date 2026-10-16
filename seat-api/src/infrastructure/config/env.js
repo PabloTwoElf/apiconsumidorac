@@ -98,6 +98,8 @@ export const env = Object.freeze({
   // conversión, que es el caso normal: la cuenta de negocio liquida en USD.
   // Solo hay que cambiarlo si se cotiza en una moneda que PayPal no soporta.
   PAYMENT_CURRENCY: process.env.PAYMENT_CURRENCY ?? 'USD',
+  // Si se define, las rutas /api/admin exigen la cabecera x-admin-token.
+  ADMIN_TOKEN: process.env.ADMIN_TOKEN ?? '',
   PAYMENT_FX_RATE: float(process.env.PAYMENT_FX_RATE, 1),
 });
 

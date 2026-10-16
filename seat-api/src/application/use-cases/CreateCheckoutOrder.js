@@ -146,7 +146,9 @@ export class CreateCheckoutOrder {
 
     return {
       orderId: order.orderId,
+      success: gatewayOrder.success,
       status: gatewayOrder.status,
+      estado: gatewayOrder.estado,
       approvalUrl: order.approvalUrl,
       rutaId,
       fecha,

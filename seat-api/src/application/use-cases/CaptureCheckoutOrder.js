@@ -1,5 +1,4 @@
 import { ConflictError, NotFoundError, ValidationError } from '../../domain/errors/DomainError.js';
-import { Reservation } from '../../domain/model/Reservation.js';
 
 /**
  * Caso de uso: capturar el pago y confirmar los asientos.
@@ -15,14 +14,21 @@ import { Reservation } from '../../domain/model/Reservation.js';
  * posible, así que una vez capturado el dinero se honra el asiento igual si
  * sigue libre, y si otro comprador lo tomó se marca la orden como
  * `requiereAtencion` con el captureId a la vista para gestionar la devolución.
+ *
+ * Si PayPal deja la captura en PENDING (revisión, multidivisa, sandbox) no se
+ * entregan asientos: la orden pasa a `en_revision`, los bloqueos se alargan y
+ * un administrador la aprueba o rechaza desde el panel (ReviewPendingPayment).
+ * Volver a llamar a la captura es seguro y sirve al cliente para saber cuándo
+ * se decidió.
  */
 export class CaptureCheckoutOrder {
-  constructor({ seatRepository, orderRepository, paymentGateway, confirmReservation, clock }) {
+  constructor({ seatRepository, orderRepository, paymentGateway, deliverOrderSeats, clock, reviewHoldMs = 60 * 60_000 }) {
     this.seatRepository = seatRepository;
     this.orderRepository = orderRepository;
     this.paymentGateway = paymentGateway;
-    this.confirmReservation = confirmReservation;
+    this.deliverOrderSeats = deliverOrderSeats;
     this.clock = clock;
+    this.reviewHoldMs = reviewHoldMs;
   }
 
   async execute({ orderId, userId = null }) {
@@ -47,11 +53,21 @@ export class CaptureCheckoutOrder {
         status: order.status,
         captureId: order.captureId,
         yaProcesada: true,
+        enRevision: false,
+        rutaId: order.rutaId,
+        fecha: order.fecha,
         asientos: order.asientos,
         reservas: order.asientos.map((asiento) => ({ asiento, estado: 'reservado' })),
+        conflictos: [],
+        requiereAtencion: false,
         pricing: order.pricing,
+        cobro: order.paypalAmount,
         payer: order.payer,
       };
+    }
+
+    if (order.isInReview) {
+      return this.#reviewResponse(order);
     }
 
     if (!order.isPending) {
@@ -72,6 +88,19 @@ export class CaptureCheckoutOrder {
       throw error;
     }
 
+    // PENDING: PayPal aceptó el pago pero lo retiene. Un administrador decide.
+    if (capture.status === 'PENDING') {
+      this.#extendHolds(order, now + this.reviewHoldMs);
+      order.markInReview({
+        captureId: capture.captureId,
+        payer: capture.payer,
+        captureStatus: capture.status,
+        at: now,
+      });
+      this.orderRepository.save(order);
+      return this.#reviewResponse(order);
+    }
+
     if (capture.status && !['COMPLETED', 'APPROVED'].includes(capture.status)) {
       order.markFailed({ reason: `PayPal devolvió estado ${capture.status}`, at: now });
       this.orderRepository.save(order);
@@ -82,60 +111,11 @@ export class CaptureCheckoutOrder {
     }
 
     // Dinero cobrado. A partir de aquí hay que entregar los asientos.
-    const reservas = [];
-    const conflictos = [];
-
-    for (const holdId of order.holdIds) {
-      const hold = this.seatRepository.findHoldById(holdId);
-
-      if (hold && !hold.isExpiredAt(now)) {
-        const result = this.confirmReservation.execute({
-          rutaId: hold.rutaId,
-          fecha: hold.fecha,
-          asiento: hold.asiento,
-          holdId,
-          orderId,
-          captureId: capture.captureId,
-        });
-        reservas.push({ asiento: result.asiento, estado: 'reservado', reservedAt: result.reservedAt });
-        continue;
-      }
-
-      // El hold ya no vale. Buscamos el asiento por la orden, que sí lo recuerda.
-      const indice = order.holdIds.indexOf(holdId);
-      const asiento = order.asientos[indice];
-
-      const ocupado = this.seatRepository.findReservation(order.rutaId, order.fecha, asiento);
-      if (ocupado) {
-        conflictos.push({
-          asiento,
-          estado: 'no_disponible',
-          motivo: 'El bloqueo expiró y otro comprador reservó el asiento',
-        });
-        continue;
-      }
-
-      // Pago válido y asiento libre: se honra aunque el temporizador venciera.
-      this.seatRepository.saveReservation(
-        new Reservation({
-          rutaId: order.rutaId,
-          fecha: order.fecha,
-          asiento,
-          userId: order.userId,
-          holdId,
-          orderId,
-          captureId: capture.captureId,
-          reservedAt: now,
-        })
-      );
-      this.seatRepository.deleteHold(order.rutaId, order.fecha, asiento);
-      reservas.push({
-        asiento,
-        estado: 'reservado',
-        reservedAt: now,
-        nota: 'El bloqueo había expirado, pero el asiento seguía libre y el pago fue válido',
-      });
-    }
+    const { reservas, conflictos } = this.deliverOrderSeats.execute({
+      order,
+      captureId: capture.captureId,
+      now,
+    });
 
     order.markPaid({ captureId: capture.captureId, payer: capture.payer, at: now });
     if (conflictos.length > 0) {
@@ -148,6 +128,7 @@ export class CaptureCheckoutOrder {
       status: order.status,
       captureId: capture.captureId,
       yaProcesada: false,
+      enRevision: false,
       rutaId: order.rutaId,
       fecha: order.fecha,
       asientos: reservas.map((r) => r.asiento),
@@ -157,6 +138,37 @@ export class CaptureCheckoutOrder {
       pricing: order.pricing,
       cobro: order.paypalAmount,
       payer: capture.payer,
+    };
+  }
+
+  /** Mantiene los asientos apartados mientras el pago está en revisión. */
+  #extendHolds(order, until) {
+    for (const holdId of order.holdIds) {
+      const hold = this.seatRepository.findHoldById(holdId);
+      if (hold) {
+        hold.extendUntil(until);
+        this.seatRepository.saveHold(hold);
+      }
+    }
+  }
+
+  #reviewResponse(order) {
+    return {
+      orderId: order.orderId,
+      status: order.status,
+      captureId: order.captureId,
+      yaProcesada: false,
+      enRevision: true,
+      mensaje: 'PayPal dejó el pago pendiente. Un administrador lo está revisando; los asientos siguen apartados.',
+      rutaId: order.rutaId,
+      fecha: order.fecha,
+      asientos: order.asientos,
+      reservas: [],
+      conflictos: [],
+      requiereAtencion: false,
+      pricing: order.pricing,
+      cobro: order.paypalAmount,
+      payer: order.payer,
     };
   }
 }

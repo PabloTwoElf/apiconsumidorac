@@ -35,6 +35,8 @@ export const renderDashboard = (config) => {
     ['GET', '/api/checkout/configuracion', 'Datos públicos de la pasarela'],
     ['POST', '/api/checkout/crear-orden', 'Crear orden de pago en PayPal'],
     ['POST', '/api/checkout/capturar-orden', 'Capturar pago y reservar'],
+    ['GET', '/api/admin/pagos-pendientes', 'Pagos en revisión manual'],
+    ['POST', '/api/admin/pagos/:orderId/aprobar', 'Aprobar pago y confirmar asientos'],
     ['GET', '/api/checkout/orden/{orderId}', 'Consultar estado de una orden'],
     ['POST', '/api/checkout/webhook', 'Receptor de webhooks de PayPal'],
   ];
@@ -264,6 +266,17 @@ export const renderDashboard = (config) => {
       </section>
     </div>
   </div>
+
+  <section class="glass card" style="margin-top:18px" aria-label="Pagos en revisión">
+    <h2><span class="ico">🛡️</span>Pagos en revisión <span class="pill" id="adm-count">0</span></h2>
+    <p class="sub">PayPal dejó estas capturas en <code>PENDING</code>. Al aprobar se confirman los asientos y el cliente ve su reserva; al rechazar se liberan. Se actualiza cada 5 s.</p>
+    <div class="field" style="max-width:280px;margin-top:10px">
+      <label for="adm-token">Token de admin (si ADMIN_TOKEN está definido)</label>
+      <input id="adm-token" type="password" autocomplete="off">
+    </div>
+    <div class="note" id="adm-msg" role="status" aria-live="polite" style="margin-top:12px"></div>
+    <div id="adm-list" class="endpoints" style="margin-top:12px"></div>
+  </section>
 
   <section class="glass card" style="margin-top:18px" aria-label="Endpoints disponibles">
     <h2><span class="ico">🔌</span>Endpoints publicados</h2>

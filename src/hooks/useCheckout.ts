@@ -36,6 +36,16 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
   // que no ve el estado de React.
   const holdRef = useRef<HoldResult | null>(null);
   holdRef.current = hold;
+  const phaseRef = useRef<Phase>(phase);
+  phaseRef.current = phase;
+
+  // Sondeo mientras el pago espera la revisión del administrador.
+  const reviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopReviewPolling = () => {
+    if (reviewTimer.current) clearTimeout(reviewTimer.current);
+    reviewTimer.current = null;
+  };
+  useEffect(() => stopReviewPolling, []);
 
   /** Último recurso: al cerrar la pestaña se avisa al API para que libere. */
   useEffect(() => {
@@ -48,6 +58,7 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
   }, [userId]);
 
   const reset = useCallback(() => {
+    stopReviewPolling();
     setPhase('selecting');
     setHold(null);
     setOrderId(null);
@@ -96,12 +107,29 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
     return order.orderId;
   }, [hold, userId]);
 
-  /** Paso ③: cobrar y confirmar los asientos. */
+  /**
+   * Paso ③: cobrar y confirmar los asientos.
+   *
+   * Si PayPal deja el pago en PENDING, el API lo pone en revisión manual y
+   * aquí se reintenta la captura (idempotente) hasta que el administrador lo
+   * apruebe o rechace.
+   */
   const capture = useCallback(
-    async (id: string) => {
+    async (id: string, polling = false) => {
       setPhase('capturing');
       try {
         const result = await api.captureOrder({ orderId: id, userId });
+
+        if (result.enRevision) {
+          if (!polling) {
+            onInfo('warn', 'Pago en revisión', result.mensaje ?? 'Esperando la aprobación del administrador.');
+          }
+          stopReviewPolling();
+          reviewTimer.current = setTimeout(() => void capture(id, true), 4000);
+          return;
+        }
+
+        stopReviewPolling();
         setReceipt(result);
         setPhase('done');
         setHold(null);
@@ -122,6 +150,7 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
         onSeatsChanged();
       } catch (error) {
         const apiError = error as ApiError;
+        stopReviewPolling();
         setPhase('held');
         onInfo('bad', 'No se pudo capturar el pago', apiError.message);
         onSeatsChanged();
@@ -151,6 +180,8 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
   /** El temporizador llegó a cero: el servidor ya los habrá purgado. */
   const expire = useCallback(() => {
     if (!holdRef.current) return;
+    // En revisión el servidor alargó los bloqueos: el contador local no manda.
+    if (phaseRef.current === 'capturing') return;
     onInfo('warn', 'Se agotó el tiempo', 'Los asientos volvieron a quedar disponibles.');
     reset();
     onSeatsChanged();

@@ -113,6 +113,9 @@ export interface CaptureResult {
   status: string;
   captureId: string;
   yaProcesada: boolean;
+  /** PayPal dejó la captura en PENDING: un administrador debe aprobarla. */
+  enRevision?: boolean;
+  mensaje?: string;
   asientos: number[];
   reservas: ReservationLine[];
   conflictos: ConflictLine[];

@@ -17,6 +17,16 @@ const ENDPOINTS = {
   transactions: '/v1/reporting/transactions',
 };
 
+// Estados de una orden de PayPal traducidos a un vocabulario simple.
+const ORDER_STATES = {
+  CREATED: 'PENDIENTE_APROBACION',
+  PAYER_ACTION_REQUIRED: 'PENDIENTE_APROBACION',
+  SAVED: 'PENDIENTE_APROBACION',
+  APPROVED: 'APROBADA',
+  COMPLETED: 'COMPLETADA',
+  VOIDED: 'ANULADA',
+};
+
 /**
  * Adaptador de la pasarela PayPal (API REST v2, Orders).
  *
@@ -193,7 +203,6 @@ export class PayPalPaymentGateway extends PaymentGatewayPort {
       details: data?.details ?? null,
     });
   }
-
   async createOrder({ amount, referenceId, customId, description, items, returnUrl, cancelUrl }) {
     // Traducción del vocabulario del dominio al de PayPal. Es el único sitio
     // del proyecto donde aparecen `value` y `currency_code`.
@@ -228,10 +237,16 @@ export class PayPalPaymentGateway extends PaymentGatewayPort {
       requestId: referenceId || randomUUID(),
     });
 
+    const approvalUrl = order.links?.find((link) => link.rel === 'approve')?.href ?? null;
+
     return {
+      // true si PayPal creó la orden y el comprador ya puede aprobarla.
+      success: Boolean(order.id) && (Boolean(approvalUrl) || order.status === 'APPROVED'),
       orderId: order.id,
       status: order.status,
-      approvalUrl: order.links?.find((link) => link.rel === 'approve')?.href ?? null,
+      // Estado simplificado: una orden recién creada queda lista para aprobar.
+      estado: ORDER_STATES[order.status] ?? 'DESCONOCIDO',
+      approvalUrl,
       raw: order,
     };
   }
@@ -325,9 +340,9 @@ export class PayPalPaymentGateway extends PaymentGatewayPort {
         comision: info.fee_amount?.value ?? null,
         neto: info.transaction_amount?.value && info.fee_amount?.value
           ? (
-              Number.parseFloat(info.transaction_amount.value) +
-              Number.parseFloat(info.fee_amount.value)
-            ).toFixed(2)
+            Number.parseFloat(info.transaction_amount.value) +
+            Number.parseFloat(info.fee_amount.value)
+          ).toFixed(2)
           : null,
         concepto: info.transaction_subject ?? info.transaction_note ?? null,
         referencia: info.custom_field ?? info.invoice_id ?? null,

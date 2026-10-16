@@ -42,6 +42,7 @@ export class InMemoryOrderRepository extends OrderRepositoryPort {
     return {
       total: orders.length,
       pendientes: orders.filter((o) => o.status === 'pending').length,
+      enRevision: orders.filter((o) => o.status === 'en_revision').length,
       pagadas: orders.filter((o) => o.status === 'paid').length,
       fallidas: orders.filter((o) => o.status === 'failed').length,
     };

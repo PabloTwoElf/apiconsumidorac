@@ -5,12 +5,14 @@ import { ValidationError } from '../errors/DomainError.js';
  *
  * No replica los estados de PayPal: describe qué puede hacer la aplicación.
  * PENDING  → orden creada, esperando que el comprador apruebe en PayPal
+ * REVIEW   → PayPal dejó la captura en PENDING; un administrador decide
  * PAID     → fondos capturados y asientos convertidos en reservas
  * FAILED   → la captura fue rechazada
  * CANCELLED→ el comprador abandonó o los holds expiraron
  */
 export const OrderStatus = Object.freeze({
   PENDING: 'pending',
+  REVIEW: 'en_revision',
   PAID: 'paid',
   FAILED: 'failed',
   CANCELLED: 'cancelled',
@@ -68,6 +70,10 @@ export class PaymentOrder {
     return this.status === OrderStatus.PENDING;
   }
 
+  get isInReview() {
+    return this.status === OrderStatus.REVIEW;
+  }
+
   get isPaid() {
     return this.status === OrderStatus.PAID;
   }
@@ -78,6 +84,16 @@ export class PaymentOrder {
     this.payer = payer;
     this.updatedAt = at;
     this.events.push({ type: 'PAID', at, captureId });
+    return this;
+  }
+
+  /** La captura quedó PENDING en PayPal: los asientos esperan la decisión del admin. */
+  markInReview({ captureId, payer, captureStatus, at }) {
+    this.status = OrderStatus.REVIEW;
+    this.captureId = captureId;
+    this.payer = payer;
+    this.updatedAt = at;
+    this.events.push({ type: 'IN_REVIEW', at, captureId, captureStatus });
     return this;
   }
 

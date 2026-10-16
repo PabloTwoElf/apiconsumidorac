@@ -62,8 +62,25 @@ export class HandlePaymentWebhook {
         }
         break;
 
+      case 'PAYMENT.CAPTURE.PENDING':
+        // PayPal retiene el pago: pasa a la cola de revisión del administrador.
+        if (order && order.isPending) {
+          order.markInReview({
+            captureId: event?.resource?.id ?? null,
+            payer: event?.resource?.payer ?? null,
+            captureStatus: 'PENDING',
+            at: now,
+          });
+          this.orderRepository.save(order);
+          accion = 'en_revision';
+        } else {
+          accion = 'ya_registrada';
+        }
+        break;
+
       case 'PAYMENT.CAPTURE.COMPLETED':
-        if (order && !order.isPaid) {
+        // Una orden en revisión la decide el administrador, no el webhook.
+        if (order && order.isPending) {
           order.markPaid({
             captureId: event?.resource?.id ?? null,
             payer: event?.resource?.payer ?? null,

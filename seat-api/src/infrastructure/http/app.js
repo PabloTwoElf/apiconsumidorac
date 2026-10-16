@@ -10,6 +10,7 @@ import { AsientosController } from './controllers/asientos.controller.js';
 import { CheckoutController } from './controllers/checkout.controller.js';
 import { SistemaController } from './controllers/sistema.controller.js';
 import { ReportesController } from './controllers/reportes.controller.js';
+import { AdminController } from './controllers/admin.controller.js';
 
 /**
  * Adaptador de entrada HTTP: construye la aplicación Express y la conecta al
@@ -45,6 +46,7 @@ export const createApp = ({ logger = console } = {}) => {
     appReturnPath: env.APP_RETURN_PATH,
   });
   const reportesController = new ReportesController({ useCases });
+  const adminController = new AdminController({ useCases, adminToken: env.ADMIN_TOKEN });
   const sistemaController = new SistemaController({
     env,
     seatRepository,
@@ -107,7 +109,7 @@ export const createApp = ({ logger = console } = {}) => {
   );
 
   // ---- API ----
-  app.use('/api', buildApiRoutes({ asientosController, checkoutController, reportesController }));
+  app.use('/api', buildApiRoutes({ asientosController, checkoutController, reportesController, adminController }));
 
   // Alias histórico: el frontend ya desplegado llama a /calcular-precio en la
   // raíz, así que se mantiene además de /api/asientos/calcular-precio.

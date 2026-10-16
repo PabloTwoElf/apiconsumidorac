@@ -401,6 +401,12 @@ export const clientScript = () => /* js */ `
         body: JSON.stringify({ orderId: state.orderId, userId: $('f-user').value.trim() })
       });
 
+      if (d.enRevision) {
+        note('pay-msg', 'Pago pendiente en PayPal: esperando aprobación del administrador (abajo, "Pagos en revisión")…', 'warn');
+        setTimeout(captureOrder, 4000);
+        return;
+      }
+
       var asientos = d.reservas.map(function (r) { return '#' + r.asiento; }).join(' ');
       if (d.requiereAtencion) {
         note('pay-msg', 'Pago capturado (' + d.captureId + ') pero ' + d.conflictos.length +
@@ -423,6 +429,64 @@ export const clientScript = () => /* js */ `
       note('pay-msg', 'No se pudo capturar: ' + err.message, 'bad');
     } finally {
       $('btn-capture').disabled = false;
+    }
+  }
+
+  // ---------- Admin: pagos en revisión ----------
+  function adminHeaders() {
+    var h = { 'Content-Type': 'application/json' };
+    var t = $('adm-token').value.trim();
+    if (t) h['x-admin-token'] = t;
+    return h;
+  }
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  async function loadReviews() {
+    try {
+      var d = await api('/api/admin/pagos-pendientes', { headers: adminHeaders() });
+      $('adm-count').textContent = d.total;
+      if (d.total === 0) {
+        $('adm-list').innerHTML = '<p class="sub">No hay pagos esperando revisión.</p>';
+        return;
+      }
+      $('adm-list').innerHTML = d.pagos.map(function (p) {
+        return '<div class="endpoint" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
+          '<span class="mono">' + esc(p.orderId) + '</span>' +
+          '<span>Ruta ' + esc(p.rutaId) + ' · ' + esc(p.fecha) + ' · asientos ' + esc(p.asientos.join(', ')) + '</span>' +
+          '<strong>' + esc(p.cobro.valor) + ' ' + esc(p.cobro.moneda) + '</strong>' +
+          '<span class="sub">' + esc(p.pagador || p.userId) + '</span>' +
+          '<span style="margin-left:auto;display:flex;gap:8px">' +
+          '<button class="primary" data-act="aprobar" data-id="' + esc(p.orderId) + '">✅ Aprobar</button>' +
+          '<button data-act="rechazar" data-id="' + esc(p.orderId) + '">✖ Rechazar</button>' +
+          '</span></div>';
+      }).join('');
+    } catch (err) {
+      note('adm-msg', 'No se pudo leer la cola: ' + err.message, 'bad');
+    }
+  }
+
+  async function reviewAction(ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    btn.disabled = true;
+    try {
+      var d = await api('/api/admin/pagos/' + encodeURIComponent(btn.dataset.id) + '/' + btn.dataset.act, {
+        method: 'POST', headers: adminHeaders(), body: '{}'
+      });
+      note('adm-msg', btn.dataset.act === 'aprobar'
+        ? 'Aprobado: asientos ' + d.reservas.map(function (r) { return r.asiento; }).join(', ') + ' confirmados.'
+        : 'Rechazado: asientos liberados.', 'ok');
+      await loadReviews();
+      await loadMap();
+      await loadDiagnostics();
+    } catch (err) {
+      note('adm-msg', 'No se pudo ' + btn.dataset.act + ': ' + err.message, 'bad');
+      btn.disabled = false;
     }
   }
 
@@ -465,6 +529,9 @@ export const clientScript = () => /* js */ `
     });
     $('btn-capture').addEventListener('click', captureOrder);
     $('btn-release').addEventListener('click', releaseHolds);
+    $('adm-list').addEventListener('click', reviewAction);
+    loadReviews();
+    setInterval(loadReviews, 5000);
 
     // Si PayPal redirigió de vuelta con ?orden=..., se retoma la captura.
     var params = new URLSearchParams(location.search);

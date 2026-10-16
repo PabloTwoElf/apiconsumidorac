@@ -25,6 +25,12 @@ export class Hold {
     return Math.max(0, this.expiresAt - now);
   }
 
+  /** Alarga el bloqueo, p. ej. mientras un pago espera revisión manual. */
+  extendUntil(timestamp) {
+    this.expiresAt = Math.max(this.expiresAt, timestamp);
+    return this;
+  }
+
   belongsTo(userId) {
     return Boolean(userId) && this.userId === userId;
   }
