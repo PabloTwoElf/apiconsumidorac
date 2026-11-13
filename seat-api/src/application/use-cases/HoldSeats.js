@@ -33,26 +33,44 @@ export class HoldSeats {
 
     requested.forEach((numero) => this.seatLayout.assertValidSeat(numero));
 
-    if (requested.length > this.pricingPolicy.maxSeats) {
-      throw new ValidationError(
-        `No se pueden bloquear más de ${this.pricingPolicy.maxSeats} asientos a la vez`,
-        { maxSeats: this.pricingPolicy.maxSeats }
-      );
-    }
-
-    if (this.pricingPolicy.requiresCompanyName(requested.length) && !String(companyName || '').trim()) {
-      throw new ValidationError(
-        `Para ${this.pricingPolicy.corporateFrom} asientos o más se requiere el nombre de la compañía`,
-        { corporateFrom: this.pricingPolicy.corporateFrom }
-      );
-    }
-
     const now = this.clock.now();
     this.seatRepository.purgeExpiredHolds(now);
 
+    // Las reglas se aplican sobre el TOTAL de asientos que el usuario tendría
+    // bloqueados en este viaje (los que ya tiene + los que pide ahora), no solo
+    // sobre esta llamada. Así no se pueden saltar el máximo ni la exigencia de
+    // razón social bloqueando los asientos de uno en uno.
+    const ownHolds = this.seatRepository
+      .listHoldsForTrip(rutaId, fecha)
+      .filter((hold) => !hold.isExpiredAt(now) && hold.belongsTo(userId));
+    const ownSeats = new Set(ownHolds.map((hold) => hold.asiento));
+    const newSeats = requested.filter((numero) => !ownSeats.has(numero));
+    const totalSeats = ownHolds.length + newSeats.length;
+
+    if (totalSeats > this.pricingPolicy.maxSeats) {
+      throw new ValidationError(
+        `No se pueden reservar más de ${this.pricingPolicy.maxSeats} asientos por viaje (ya tienes ${ownHolds.length} bloqueados)`,
+        { maxSeats: this.pricingPolicy.maxSeats, bloqueados: ownHolds.length }
+      );
+    }
+
+    const company =
+      String(companyName || '').trim() || ownHolds.find((hold) => hold.companyName)?.companyName || '';
+
+    if (this.pricingPolicy.requiresCompanyName(totalSeats) && !company) {
+      throw new ValidationError(
+        `Para ${this.pricingPolicy.corporateFrom} asientos o más se requiere el nombre de la compañía`,
+        { corporateFrom: this.pricingPolicy.corporateFrom, code: 'COMPANY_REQUIRED' }
+      );
+    }
+
+    // Si ya hay holds propios sin precio propio, se hereda el suyo: una orden no
+    // puede mezclar precios unitarios.
+    const effectiveUnitPrice = unitPrice ?? ownHolds.find((hold) => hold.precioUnitario)?.precioUnitario ?? null;
+
     const created = [];
     try {
-      for (const numero of requested) {
+      for (const numero of newSeats) {
         if (this.seatRepository.findReservation(rutaId, fecha, numero)) {
           throw new ConflictError(`El asiento ${numero} ya está reservado`, { asiento: numero });
         }
@@ -67,8 +85,8 @@ export class HoldSeats {
           fecha,
           asiento: numero,
           userId,
-          companyName: companyName ? String(companyName).trim() : null,
-          precioUnitario: unitPrice,
+          companyName: company || null,
+          precioUnitario: effectiveUnitPrice,
           createdAt: now,
           expiresAt: now + this.holdTtlMs,
         });
@@ -84,7 +102,7 @@ export class HoldSeats {
       throw error;
     }
 
-    const pricing = this.pricingPolicy.quote(created.length, { unitPrice });
+    const pricing = this.pricingPolicy.quote(totalSeats, { unitPrice: effectiveUnitPrice });
     const expiresAt = now + this.holdTtlMs;
 
     return {
