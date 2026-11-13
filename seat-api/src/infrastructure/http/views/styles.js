@@ -169,7 +169,9 @@ header.hero {
 
 .card { padding: 20px; }
 .card h2 { margin: 0 0 4px; font-size: 0.95rem; font-weight: 620; letter-spacing: -0.01em; }
-.card h2 .ico { margin-right: 7px; opacity: 0.85; }
+.card h2 .ico { margin-right: 7px; opacity: 0.85; display: inline-flex; align-items: center; color: var(--sky, #7dd3fc); }
+.icon { display: inline-block; vertical-align: -0.125em; }
+.dot.mine { background: var(--ok, #4ade80); }
 .card .sub { margin: 0 0 16px; font-size: 0.78rem; color: var(--text-faint); }
 
 .metric { font-size: 1.85rem; font-weight: 640; letter-spacing: -0.03em; line-height: 1.1; }
@@ -388,7 +390,7 @@ ol.steps li::before {
   -webkit-backdrop-filter: blur(8px);
 }
 
-ol.steps li.done::before { background: rgba(74, 222, 128, 0.32); border-color: var(--ok); content: "✓"; }
+ol.steps li.done::before { background: rgba(74, 222, 128, 0.32); border-color: var(--ok); content: ""; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234ade80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E"); background-size: 60%; background-repeat: no-repeat; background-position: center; }
 ol.steps li.active::before { background: linear-gradient(140deg, rgba(56, 189, 248, 0.5), rgba(167, 139, 250, 0.5)); border-color: var(--accent); }
 ol.steps li.done, ol.steps li.active { color: var(--text); }
 

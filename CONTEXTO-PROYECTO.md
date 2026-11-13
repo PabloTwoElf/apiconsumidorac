@@ -8,6 +8,15 @@
 
 ---
 
+## 0. Actualización (noviembre 2026): precio por ruta
+
+El consumidor puede enviar `precioUnitario` al bloquear (`POST /api/asientos/reservar`)
+y al cotizar (`POST /api/asientos/calcular-precio`, ruta nueva, o el alias `/calcular-precio`).
+El precio se guarda en el hold y la orden de PayPal se cobra con él; `BASE_PRICE` pasa a
+ser solo el valor por defecto. Resuelve que PayPal cobrara 12,50 USD cuando la ruta de
+CulturalTrip valía 18. Detalle y verificación en [`docs/PRECIO-POR-RUTA.md`](docs/PRECIO-POR-RUTA.md);
+estado general en [`docs/ESTADO-DEL-PROYECTO.md`](docs/ESTADO-DEL-PROYECTO.md).
+
 ## 1. Resumen
 
 Este repositorio contiene dos cosas que se despliegan por separado:

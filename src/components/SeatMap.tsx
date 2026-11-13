@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Icon } from './Icon';
 import { SeatButton } from './SeatButton';
 import type { Seat, SeatSummary } from '../types/api';
 
@@ -29,6 +30,48 @@ function toRows(seats: Seat[], perRow: number) {
   return rows;
 }
 
+/**
+ * Carrocería del bus.
+ *
+ * El mapa no es una rejilla de botones: delimita el vehículo para que el
+ * comprador se oriente como en el bus real. Parabrisas y cabina (volante y
+ * puerta) delante, laterales marcados como ventana, número de fila, pasillo
+ * con línea de guía y cola detrás. Todo sobre el mismo cristal que el resto de
+ * paneles.
+ */
+function BusChassis({ children, aria }: { children: React.ReactNode; aria?: string }) {
+  return (
+    <div className="bus" role={aria ? 'group' : undefined} aria-label={aria}>
+      <div className="bus__front" aria-hidden="true">
+        <span className="bus__windshield">Frente</span>
+      </div>
+
+      <div className="bus__cabin" aria-hidden="true">
+        <span className="bus__cabin-item bus__cabin-item--driver">
+          <Icon name="wheel" size={18} /> Conductor
+        </span>
+        <span className="bus__cabin-item">
+          <Icon name="door" size={16} /> Puerta
+        </span>
+      </div>
+
+      <div className="bus__body">
+        <div className="bus__rail" aria-hidden="true">
+          <span>Ventana</span>
+        </div>
+        <div className="bus__rows">{children}</div>
+        <div className="bus__rail bus__rail--right" aria-hidden="true">
+          <span>Ventana</span>
+        </div>
+      </div>
+
+      <div className="bus__back" aria-hidden="true">
+        Parte trasera
+      </div>
+    </div>
+  );
+}
+
 export function SeatMap({
   seats,
   seatsPerRow = 4,
@@ -42,9 +85,8 @@ export function SeatMap({
 
   if (loading) {
     return (
-      <div className="bus" aria-busy="true">
-        <div className="bus__screen">Cargando el bus…</div>
-        <div className="bus__rows">
+      <div aria-busy="true">
+        <BusChassis>
           {Array.from({ length: 10 }, (_, r) => (
             <div className="row" key={r}>
               <span className="row__num" />
@@ -59,7 +101,7 @@ export function SeatMap({
               </div>
             </div>
           ))}
-        </div>
+        </BusChassis>
         <span className="sr-only">Cargando el mapa de asientos</span>
       </div>
     );
@@ -69,7 +111,7 @@ export function SeatMap({
     return (
       <div className="empty">
         <span className="empty__icon" aria-hidden="true">
-          🚍
+          <Icon name="bus" size={30} />
         </span>
         No hay asientos para este viaje. Comprueba la ruta y la fecha.
       </div>
@@ -77,10 +119,8 @@ export function SeatMap({
   }
 
   return (
-    <div className="bus">
-      <div className="bus__screen">Ventana · Pasillo ‖ Pasillo · Ventana</div>
-
-      <div className="bus__rows">
+    <div>
+      <BusChassis aria="Mapa de asientos del bus">
         {rows.map(({ row, left, right }) => (
           <div className="row" key={row}>
             <span className="row__num" aria-hidden="true">
@@ -102,6 +142,7 @@ export function SeatMap({
             <div className="row__aisle" aria-hidden="true">
               <i />
               <i />
+              <i />
             </div>
 
             <div className="row__side">
@@ -117,7 +158,7 @@ export function SeatMap({
             </div>
           </div>
         ))}
-      </div>
+      </BusChassis>
 
       <div className="legend">
         <span className="legend__item">

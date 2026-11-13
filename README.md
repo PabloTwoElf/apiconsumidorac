@@ -4,6 +4,9 @@ Aplicación Vite + React + TypeScript para elegir asientos de bus y pagarlos con
 PayPal Sandbox. Consume el [Seat API](seat-api/) que vive en este mismo
 repositorio.
 
+> Estado actual y cambios de la última revisión en
+> [`docs/ESTADO-DEL-PROYECTO.md`](docs/ESTADO-DEL-PROYECTO.md); cómo el consumidor fija
+> el precio que cobra PayPal en [`docs/PRECIO-POR-RUTA.md`](docs/PRECIO-POR-RUTA.md).
 > Contexto completo del proyecto, decisiones de diseño y pasos de despliegue en
 > [`CONTEXTO-PROYECTO.md`](CONTEXTO-PROYECTO.md).
 
@@ -91,9 +94,12 @@ cambiar el aspecto de toda la aplicación basta editar `styles/tokens.css`.
 ④ Confirmar              POST /api/checkout/capturar-orden → comprobante
 ```
 
-El precio **lo calcula siempre el servidor** (`/calcular-precio`): el navegador
-no replica la tabla de descuentos, y al crear la orden solo envía `holdIds`,
-nunca un importe.
+El precio **lo calcula siempre el servidor** (`/api/asientos/calcular-precio`):
+el navegador no replica la tabla de descuentos, y al crear la orden solo envía
+`holdIds`, nunca un importe. El consumidor puede fijar el **precio por asiento de
+la ruta** (`precioUnitario`) al bloquear: queda guardado en el hold y es lo que
+cobra PayPal. Sin él se usa el `BASE_PRICE` del API. El campo "Precio por
+asiento" de esta interfaz reproduce ese flujo.
 
 Los asientos se liberan al cancelar y también al cerrar la pestaña, mediante
 `navigator.sendBeacon`.
@@ -148,6 +154,13 @@ definen en **este mismo proyecto** de Vercel, porque es quien ejecuta la funció
 Pasos detallados en [`CONTEXTO-PROYECTO.md`](CONTEXTO-PROYECTO.md).
 
 ---
+
+## Documentación
+
+- [`docs/ESTADO-DEL-PROYECTO.md`](docs/ESTADO-DEL-PROYECTO.md) — qué hay, qué cambió, qué se verificó.
+- [`docs/PRECIO-POR-RUTA.md`](docs/PRECIO-POR-RUTA.md) — contrato de `precioUnitario` y por qué PayPal cobra el precio de la ruta.
+- [`CONTEXTO-PROYECTO.md`](CONTEXTO-PROYECTO.md) — historial completo de decisiones.
+- Swagger en `/api-docs` del API desplegado.
 
 ## Conectar el programa principal
 

@@ -12,7 +12,7 @@ import type { Quote } from '../types/api';
  * Se aplica un pequeño retardo porque al seleccionar asientos rápido se
  * dispararían varias peticiones seguidas, y solo interesa la última.
  */
-export function useQuote(cantidad: number) {
+export function useQuote(cantidad: number, precioUnitario: number | null = null) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -30,7 +30,7 @@ export function useQuote(cantidad: number) {
 
       setLoading(true);
       api
-        .quote(cantidad, controller.signal)
+        .quote(cantidad, precioUnitario, controller.signal)
         .then((result) => {
           setQuote(result);
           setLoading(false);
@@ -47,7 +47,7 @@ export function useQuote(cantidad: number) {
       clearTimeout(timer);
       abortRef.current?.abort();
     };
-  }, [cantidad]);
+  }, [cantidad, precioUnitario]);
 
   return { quote, loading };
 }

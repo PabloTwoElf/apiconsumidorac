@@ -1,6 +1,7 @@
+import { Icon } from './Icon';
 import type { Toast } from '../hooks/useToasts';
 
-const ICON = { ok: '✓', warn: '⚠', bad: '✕' } as const;
+const ICON = { ok: 'check-circle', warn: 'alert', bad: 'x-circle' } as const;
 
 /**
  * Pila de avisos flotantes.
@@ -14,7 +15,7 @@ export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id:
       {toasts.map((toast) => (
         <div className={`toast toast--${toast.kind}`} key={toast.id}>
           <span className="alert__icon" aria-hidden="true">
-            {ICON[toast.kind]}
+            <Icon name={ICON[toast.kind]} size={18} />
           </span>
           <div className="toast__body">
             <div className="toast__title">{toast.title}</div>
@@ -26,7 +27,7 @@ export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss: (id:
             onClick={() => onDismiss(toast.id)}
             aria-label="Cerrar aviso"
           >
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </div>
       ))}

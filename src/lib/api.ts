@@ -110,9 +110,18 @@ export const api = {
   viewModel: (params: { rutaId: string; fecha: string; userId: string }, signal?: AbortSignal) =>
     request<ViewModel>(`/api/asientos/view-model?${new URLSearchParams(params)}`, { signal }),
 
-  /** Cotiza N asientos. El precio lo decide siempre el servidor. */
-  quote: (cantidad: number, signal?: AbortSignal) =>
-    request<Quote>('/calcular-precio', { method: 'POST', body: { cantidad }, signal }),
+  /**
+   * Cotiza N asientos. La tabla de descuentos y el redondeo los decide siempre
+   * el servidor; `precioUnitario` es el precio de la ruta que fija la
+   * aplicación consumidora (CulturalTrip) y, si se omite, el API usa su
+   * BASE_PRICE.
+   */
+  quote: (cantidad: number, precioUnitario?: number | null, signal?: AbortSignal) =>
+    request<Quote>('/api/asientos/calcular-precio', {
+      method: 'POST',
+      body: { cantidad, ...(precioUnitario ? { precioUnitario } : {}) },
+      signal,
+    }),
 
   /** Bloqueo todo-o-nada: si un asiento falla, ninguno queda tomado. */
   hold: (body: {
@@ -121,7 +130,13 @@ export const api = {
     asientos: number[];
     userId: string;
     companyName?: string;
-  }) => request<HoldResult>('/api/asientos/reservar', { method: 'POST', body }),
+    /** Precio de la ruta; viaja en el hold y es lo que cobra PayPal. */
+    precioUnitario?: number | null;
+  }) =>
+    request<HoldResult>('/api/asientos/reservar', {
+      method: 'POST',
+      body: { ...body, precioUnitario: body.precioUnitario || undefined },
+    }),
 
   release: (body: { holdIds: string[]; userId: string }) =>
     request<ReleaseResult>('/api/asientos/holds', { method: 'DELETE', body }),

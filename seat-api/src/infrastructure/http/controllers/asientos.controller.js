@@ -48,6 +48,8 @@ export class AsientosController {
         asientos: req.body.asientos,
         userId: req.body.userId,
         companyName: req.body.companyName,
+        // Precio de la ruta que fija la aplicación consumidora (opcional).
+        precioUnitario: req.body.precioUnitario,
       });
       res.status(201).json({ ok: true, ...result });
     } catch (error) {
@@ -113,7 +115,8 @@ export class AsientosController {
   calcularPrecio = (req, res, next) => {
     try {
       const cantidad = req.body?.cantidad ?? req.query?.cantidad;
-      const result = this.useCases.calculatePrice.execute({ cantidad });
+      const precioUnitario = req.body?.precioUnitario ?? req.query?.precioUnitario ?? null;
+      const result = this.useCases.calculatePrice.execute({ cantidad, precioUnitario });
       res.json({ ok: true, ...result });
     } catch (error) {
       next(error);

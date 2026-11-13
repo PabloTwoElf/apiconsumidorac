@@ -46,9 +46,31 @@ export class PricingPolicy {
   }
 
   /**
-   * Desglose completo del precio para una cantidad de asientos.
+   * Valida un precio unitario enviado por el consumidor (precio de la ruta).
+   * Devuelve null cuando no se envió, para usar el BASE_PRICE del API.
    */
-  quote(quantity) {
+  resolveUnitPrice(unitPrice) {
+    if (unitPrice === undefined || unitPrice === null || unitPrice === '') return null;
+    const parsed = Number(unitPrice);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > PricingPolicy.MAX_UNIT_PRICE) {
+      throw new ValidationError(
+        `precioUnitario debe ser un número mayor a 0 y menor o igual a ${PricingPolicy.MAX_UNIT_PRICE}`,
+        { precioUnitario: unitPrice }
+      );
+    }
+    return roundToCurrency(parsed, this.currency);
+  }
+
+  /**
+   * Desglose completo del precio para una cantidad de asientos.
+   *
+   * `unitPrice` permite cotizar con el precio de la ruta que fija la aplicación
+   * consumidora (CulturalTrip guarda un precio por ruta, p. ej. 18 USD para
+   * Guayaquil–Quito). Sin él se usa el BASE_PRICE del API. La tabla de
+   * descuentos y el redondeo son los mismos en ambos casos, así que lo que ve el
+   * comprador y lo que cobra PayPal siguen saliendo de esta única función.
+   */
+  quote(quantity, { unitPrice = null } = {}) {
     if (!Number.isInteger(quantity) || quantity < 1) {
       throw new ValidationError('La cantidad de asientos debe ser un entero mayor a 0');
     }
@@ -59,10 +81,12 @@ export class PricingPolicy {
       );
     }
 
+    const basePrice = this.resolveUnitPrice(unitPrice) ?? this.basePrice;
+
     // Cada paso se redondea a la precisión de la moneda. Sin eso, un descuento
     // del 7 % sobre 37,50 USD deja importes de tres decimales que PayPal
     // rechaza y que no se pueden cobrar.
-    const baseTotal = roundToCurrency(this.basePrice * quantity, this.currency);
+    const baseTotal = roundToCurrency(basePrice * quantity, this.currency);
     const discountPercent = this.discountPercentFor(quantity);
     const discountAmount = roundToCurrency((baseTotal * discountPercent) / 100, this.currency);
     const total = roundToCurrency(baseTotal - discountAmount, this.currency);
@@ -75,7 +99,9 @@ export class PricingPolicy {
     return {
       quantity,
       currency: this.currency,
-      basePrice: this.basePrice,
+      basePrice,
+      // Indica si el precio vino de la ruta (consumidor) o del BASE_PRICE del API.
+      priceSource: basePrice === this.basePrice ? 'api' : 'ruta',
       baseTotal,
       discountPercent,
       discountAmount,
@@ -84,6 +110,9 @@ export class PricingPolicy {
       money: new Money(total, this.currency),
     };
   }
+
+  /** Tope de cordura para un precio unitario enviado por el consumidor. */
+  static MAX_UNIT_PRICE = 10_000;
 
   /** Una reserva corporativa necesita razón social para justificar el descuento. */
   requiresCompanyName(quantity) {

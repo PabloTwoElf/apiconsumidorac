@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Icon } from './Icon';
 import type { Seat } from '../types/api';
 
 const CLASS_BY_STATE: Record<Seat['estado'], string> = {
@@ -52,6 +53,9 @@ export const SeatButton = memo(function SeatButton({ seat, selected, disabled, o
       <span className="seat__pos" aria-hidden="true">
         {seat.posicion === 'Ventana' ? 'vent' : 'pas'}
       </span>
+      {/* Marca de esquina: el color por sí solo no basta para quien no lo distingue. */}
+      {seat.estado === 'miHold' && <Icon name="check" size={9} className="seat__mark seat__mark--ok" />}
+      {seat.estado === 'ocupado' && <Icon name="x" size={9} className="seat__mark seat__mark--bad" />}
     </button>
   );
 });

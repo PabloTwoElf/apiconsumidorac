@@ -1,4 +1,5 @@
 import { styles } from './styles.js';
+import { icon } from './icons.js';
 import { clientScript } from './dashboard.client.js';
 
 const escape = (value) =>
@@ -63,7 +64,7 @@ export const renderDashboard = (config) => {
 <title>CulturalTrip · Seat API</title>
 <meta name="description" content="Panel de despliegue del API de asientos con pasarela PayPal Sandbox.">
 <link rel="icon" href="data:image/svg+xml,${encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="78" font-size="78">🚌</text></svg>'
+    icon('bus', { size: 24 }).replace('currentColor', '#38bdf8')
   )}">
 <style>${styles()}</style>
 </head>
@@ -72,7 +73,7 @@ export const renderDashboard = (config) => {
 
   <header class="hero glass">
     <div class="hero-id">
-      <div class="badge-logo" aria-hidden="true">🚌</div>
+      <div class="badge-logo" aria-hidden="true">${icon('bus', { size: 26 })}</div>
       <div>
         <h1>CulturalTrip · Seat API</h1>
         <p>
@@ -85,15 +86,15 @@ export const renderDashboard = (config) => {
       <span class="pill" id="pill-deploy"><span class="dot live" id="dot-deploy"></span><span id="txt-deploy">Comprobando…</span></span>
       <span class="pill"><span class="dot ${config.nodeEnv === 'production' ? 'ok' : 'warn'}"></span>${escape(config.nodeEnv)}</span>
       <span class="pill">${config.serverless ? '▲ Vercel Functions' : '⬢ Node.js'}</span>
-      <a class="btn" href="/api-docs">📚 Swagger</a>
-      <button id="btn-theme" title="Cambiar tema" aria-label="Cambiar entre tema claro y oscuro">🌗</button>
+      <a class="btn" href="/api-docs">${icon('book')} Swagger</a>
+      <button id="btn-theme" title="Cambiar tema" aria-label="Cambiar entre tema claro y oscuro">${icon('sun')}</button>
     </div>
   </header>
 
   <!-- Tarjetas de estado del despliegue -->
   <section class="grid" aria-label="Estado del despliegue">
     <article class="glass card">
-      <h2><span class="ico">🩺</span>Despliegue</h2>
+      <h2><span class="ico">${icon('shield')}</span>Despliegue</h2>
       <p class="sub">Lo que respondió el servidor en vivo</p>
       <dl class="kv">
         <dt>URL pública</dt><dd class="mono" id="d-url">—</dd>
@@ -105,9 +106,9 @@ export const renderDashboard = (config) => {
     </article>
 
     <article class="glass card">
-      <h2><span class="ico">💳</span>PayPal Sandbox</h2>
+      <h2><span class="ico">${icon('card')}</span>PayPal Sandbox</h2>
       <p class="sub">Verificado pidiendo un token OAuth2 real</p>
-      <div class="metric" id="pp-state"><span class="spin">◌</span></div>
+      <div class="metric" id="pp-state">${icon('loader', { spin: true })}</div>
       <dl class="kv" style="margin-top:12px">
         <dt>Modo</dt><dd id="pp-mode">—</dd>
         <dt>Client ID</dt><dd class="mono" id="pp-client">—</dd>
@@ -117,7 +118,7 @@ export const renderDashboard = (config) => {
     </article>
 
     <article class="glass card">
-      <h2><span class="ico">💰</span>Precios y descuentos</h2>
+      <h2><span class="ico">${icon('wallet')}</span>Precios y descuentos</h2>
       <p class="sub">Calculados por PricingPolicy en el dominio</p>
       <div class="metric" id="pr-base">—<small> / asiento</small></div>
       <dl class="kv" style="margin-top:12px">
@@ -130,7 +131,7 @@ export const renderDashboard = (config) => {
     </article>
 
     <article class="glass card">
-      <h2><span class="ico">🎟️</span>Inventario en memoria</h2>
+      <h2><span class="ico">${icon('ticket')}</span>Inventario en memoria</h2>
       <p class="sub">Estado actual del repositorio de asientos</p>
       <div class="metric" id="inv-holds">—<small> bloqueos activos</small></div>
       <dl class="kv" style="margin-top:12px">
@@ -145,7 +146,7 @@ export const renderDashboard = (config) => {
   <!-- Demostración del flujo completo -->
   <div class="cols">
     <section class="glass card" aria-label="Mapa de asientos">
-      <h2><span class="ico">🗺️</span>Mapa de asientos en vivo</h2>
+      <h2><span class="ico">${icon('seat')}</span>Mapa de asientos en vivo</h2>
       <p class="sub">Consume <code>GET /api/asientos/view-model</code> de esta misma API</p>
 
       <div class="controls">
@@ -161,7 +162,7 @@ export const renderDashboard = (config) => {
           <label for="f-user">Usuario</label>
           <input id="f-user" value="demo-panel">
         </div>
-        <button id="btn-load" class="primary">🔄 Cargar</button>
+        <button id="btn-load" class="primary">${icon('refresh')} Cargar</button>
       </div>
 
       <div class="note" id="map-msg" role="status" aria-live="polite"></div>
@@ -180,16 +181,16 @@ export const renderDashboard = (config) => {
       </div>
 
       <div class="stats-bar">
-        <span>✅ <b id="s-disp">0</b> disponibles</span>
-        <span>🟢 <b id="s-mio">0</b> míos</span>
-        <span>🟡 <b id="s-hold">0</b> bloqueados</span>
-        <span>🔴 <b id="s-ocup">0</b> ocupados</span>
+        <span><i class="dot ok"></i> <b id="s-disp">0</b> disponibles</span>
+        <span><i class="dot mine"></i> <b id="s-mio">0</b> míos</span>
+        <span><i class="dot warn"></i> <b id="s-hold">0</b> bloqueados</span>
+        <span><i class="dot bad"></i> <b id="s-ocup">0</b> ocupados</span>
       </div>
     </section>
 
     <div style="display:grid;gap:18px">
       <section class="glass card" aria-label="Carrito y pago">
-        <h2><span class="ico">🛒</span>Carrito y pago</h2>
+        <h2><span class="ico">${icon('cart')}</span>Carrito y pago</h2>
         <p class="sub">Flujo completo contra PayPal Sandbox</p>
 
         <ol class="steps" id="steps">
@@ -228,7 +229,7 @@ export const renderDashboard = (config) => {
           </div>
 
           <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">
-            <button id="btn-hold" class="primary">🔒 Bloquear asientos</button>
+            <button id="btn-hold" class="primary">${icon('lock')} Bloquear asientos</button>
             <button id="btn-clear">Limpiar</button>
           </div>
         </div>
@@ -242,15 +243,15 @@ export const renderDashboard = (config) => {
           </div>
           <div id="paypal-buttons"></div>
           <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
-            <a class="btn" id="btn-approve" href="#" target="_blank" rel="noopener" hidden>↗ Aprobar en PayPal</a>
-            <button id="btn-capture" hidden>✅ Ya aprobé · capturar</button>
-            <button id="btn-release">↩ Liberar bloqueos</button>
+            <a class="btn" id="btn-approve" href="#" target="_blank" rel="noopener" hidden>${icon('external')} Aprobar en PayPal</a>
+            <button id="btn-capture" hidden>${icon('check-circle')} Ya aprobé · capturar</button>
+            <button id="btn-release">${icon('undo')} Liberar bloqueos</button>
           </div>
         </div>
       </section>
 
       <section class="glass card" aria-label="Cuentas de prueba">
-        <h2><span class="ico">🧪</span>Cómo probar el pago</h2>
+        <h2><span class="ico">${icon('info')}</span>Cómo probar el pago</h2>
         <p class="sub">Credenciales de comprador en PayPal Sandbox</p>
         <ol class="steps">
           <li>Bloquea asientos y crea la orden con el botón de PayPal.</li>
@@ -268,7 +269,7 @@ export const renderDashboard = (config) => {
   </div>
 
   <section class="glass card" style="margin-top:18px" aria-label="Pagos en revisión">
-    <h2><span class="ico">🛡️</span>Pagos en revisión <span class="pill" id="adm-count">0</span></h2>
+    <h2><span class="ico">${icon('shield')}</span>Pagos en revisión <span class="pill" id="adm-count">0</span></h2>
     <p class="sub">PayPal dejó estas capturas en <code>PENDING</code>. Al aprobar se confirman los asientos y el cliente ve su reserva; al rechazar se liberan. Se actualiza cada 5 s.</p>
     <div class="field" style="max-width:280px;margin-top:10px">
       <label for="adm-token">Token de admin (si ADMIN_TOKEN está definido)</label>
@@ -279,7 +280,7 @@ export const renderDashboard = (config) => {
   </section>
 
   <section class="glass card" style="margin-top:18px" aria-label="Endpoints disponibles">
-    <h2><span class="ico">🔌</span>Endpoints publicados</h2>
+    <h2><span class="ico">${icon('route')}</span>Endpoints publicados</h2>
     <p class="sub">Contrato completo en <a href="/api-docs" style="color:var(--accent)">/api-docs</a> · JSON en <a href="/api-docs.json" style="color:var(--accent)">/api-docs.json</a></p>
     <div class="endpoints">
       ${endpoints

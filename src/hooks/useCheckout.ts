@@ -67,12 +67,12 @@ export function useCheckout({ rutaId, fecha, userId, onInfo, onSeatsChanged }: O
 
   /** Paso ①: bloquear los asientos elegidos. Todo-o-nada en el servidor. */
   const holdSeats = useCallback(
-    async (asientos: number[], companyName?: string) => {
+    async (asientos: number[], companyName?: string, precioUnitario: number | null = null) => {
       if (asientos.length === 0) return;
 
       setPhase('holding');
       try {
-        const result = await api.hold({ rutaId, fecha, asientos, userId, companyName });
+        const result = await api.hold({ rutaId, fecha, asientos, userId, companyName, precioUnitario });
         setHold(result);
         setPhase('held');
         onInfo(

@@ -11,14 +11,21 @@ export class CalculatePrice {
     this.fxRate = fxRate;
   }
 
-  execute({ cantidad }) {
-    const quote = this.pricingPolicy.quote(Number(cantidad));
+  /**
+   * @param {object} input
+   * @param {number|string} input.cantidad        Asientos a cotizar.
+   * @param {number|string} [input.precioUnitario] Precio de la ruta fijado por el
+   *   consumidor. Si no se envía, se usa el BASE_PRICE del API.
+   */
+  execute({ cantidad, precioUnitario = null }) {
+    const quote = this.pricingPolicy.quote(Number(cantidad), { unitPrice: precioUnitario });
     const paypalAmount = quote.money.convertTo(this.paymentCurrency, this.fxRate);
 
     return {
       cantidad: quote.quantity,
       moneda: quote.currency,
       precioUnitario: quote.basePrice,
+      origenPrecio: quote.priceSource,
       subtotal: quote.baseTotal,
       porcentajeDescuento: quote.discountPercent,
       montoDescuento: quote.discountAmount,

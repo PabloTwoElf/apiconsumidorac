@@ -31,7 +31,7 @@ export function PriceBreakdown({ quote, loading }: Props) {
           <dd>{quote.cantidad}</dd>
         </div>
         <div className="price__row">
-          <dt>Precio unitario</dt>
+          <dt>Precio unitario{quote.origenPrecio === 'ruta' ? ' (de la ruta)' : ''}</dt>
           <dd>{money(quote.precioUnitario, quote.moneda)}</dd>
         </div>
         <div className="price__row">

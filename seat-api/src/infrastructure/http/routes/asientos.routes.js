@@ -70,6 +70,13 @@ export const buildAsientosRoutes = (controller) => {
    *                 description: "Varios asientos a la vez (tiene prioridad sobre 'asiento')"
    *               userId: { type: string, example: "user-app" }
    *               companyName: { type: string, example: "Viajes Nova S.A.", description: "Obligatorio desde 5 asientos" }
+   *               precioUnitario:
+   *                 type: number
+   *                 example: 18
+   *                 description: >
+   *                   Precio unitario de la ruta fijado por la aplicación consumidora.
+   *                   Se guarda en el hold y es el que se cobra en PayPal al crear la
+   *                   orden. Si se omite, se usa el BASE_PRICE del API.
    *     responses:
    *       201: { description: Bloqueos creados, incluye holdIds y el desglose de precio }
    *       400: { description: Datos inválidos }
@@ -162,6 +169,34 @@ export const buildAsientosRoutes = (controller) => {
    *       409: { description: holdId inválido }
    */
   router.post('/reservar-definitivo', controller.reservarDefinitivo);
+
+  /**
+   * @swagger
+   * /api/asientos/calcular-precio:
+   *   post:
+   *     tags: [Asientos]
+   *     summary: Cotizar N asientos
+   *     description: >
+   *       Misma cotización que `POST /calcular-precio` (alias histórico en la raíz),
+   *       ahora también bajo el prefijo /api/asientos para que los consumidores
+   *       no tengan que conocer la excepción. Acepta `precioUnitario` para
+   *       cotizar con el precio de la ruta de la aplicación consumidora.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [cantidad]
+   *             properties:
+   *               cantidad: { type: integer, example: 2 }
+   *               precioUnitario: { type: number, example: 18, description: "Opcional; por defecto BASE_PRICE" }
+   *     responses:
+   *       200: { description: Desglose con subtotal, descuento, total y cobro en PayPal }
+   *       400: { description: Cantidad o precio inválidos }
+   */
+  router.post('/calcular-precio', controller.calcularPrecio);
+  router.get('/calcular-precio', controller.calcularPrecio);
 
   return router;
 };

@@ -70,7 +70,16 @@ export class CreateCheckoutOrder {
     }
 
     const companyName = holds.find((hold) => hold.companyName)?.companyName ?? null;
-    const quote = this.pricingPolicy.quote(holds.length);
+
+    // El precio unitario sale del hold, no del cuerpo de esta petición: lo fijó
+    // el consumidor al bloquear (precio de la ruta en CulturalTrip) y así PayPal
+    // cobra exactamente lo que la aplicación mostró. Si los holds traen precios
+    // distintos la orden es incoherente y se rechaza.
+    const precios = [...new Set(holds.map((hold) => hold.precioUnitario ?? null))];
+    if (precios.length > 1) {
+      throw new ValidationError('Todos los bloqueos de una orden deben tener el mismo precio unitario');
+    }
+    const quote = this.pricingPolicy.quote(holds.length, { unitPrice: precios[0] ?? null });
 
     if (this.pricingPolicy.requiresCompanyName(holds.length) && !companyName) {
       throw new ValidationError(
@@ -133,6 +142,7 @@ export class CreateCheckoutOrder {
         montoDescuento: quote.discountAmount,
         total: quote.total,
         ahorros: quote.savings,
+        origenPrecio: quote.priceSource,
       },
       paypalAmount: { ...amount, tasaConversion: this.fxRate },
       approvalUrl: gatewayOrder.approvalUrl,

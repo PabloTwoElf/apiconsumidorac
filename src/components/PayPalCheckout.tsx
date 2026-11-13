@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from './Icon';
 import { loadPayPal } from '../lib/paypal';
 
 interface Props {
@@ -89,7 +90,7 @@ export function PayPalCheckout({
     return (
       <div className="alert alert--warn">
         <span className="alert__icon" aria-hidden="true">
-          ⚠
+          <Icon name="alert" size={18} />
         </span>
         <div>
           El API no tiene credenciales de PayPal configuradas. Añade{' '}
@@ -105,7 +106,7 @@ export function PayPalCheckout({
       {status === 'error' && (
         <div className="alert alert--bad" style={{ marginBottom: 10 }}>
           <span className="alert__icon" aria-hidden="true">
-            ✕
+            <Icon name="x-circle" size={18} />
           </span>
           <div>No se pudieron cargar los botones de PayPal. Revisa tu conexión o un bloqueador.</div>
         </div>
@@ -122,9 +123,7 @@ export function PayPalCheckout({
       >
         {status === 'loading' && (
           <span>
-            <span className="spin" aria-hidden="true">
-              ◌
-            </span>{' '}
+            <Icon name="loader" size={14} spin />{' '}
             Cargando PayPal…
           </span>
         )}

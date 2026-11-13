@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { apiBaseUrl } from '../lib/api';
 import type { GatewayConfig } from '../types/api';
 
@@ -35,7 +36,7 @@ export function TopBar({ gateway, online, theme, onToggleTheme }: Props) {
     <header className="topbar">
       <div className="topbar__brand">
         <div className="topbar__logo" aria-hidden="true">
-          🚌
+          <Icon name="bus" size={22} />
         </div>
         <div>
           <div className="topbar__name">CulturalTrip</div>
@@ -58,7 +59,7 @@ export function TopBar({ gateway, online, theme, onToggleTheme }: Props) {
 
         {base && (
           <a className="btn" href={`${base}/api-docs`} target="_blank" rel="noopener noreferrer">
-            <span aria-hidden="true">📚</span> API
+            <Icon name="book" size={16} /> API
           </a>
         )}
 
@@ -69,7 +70,7 @@ export function TopBar({ gateway, online, theme, onToggleTheme }: Props) {
           aria-label={`Cambiar a tema ${theme === 'dark' ? 'claro' : 'oscuro'}`}
           title={`Cambiar a tema ${theme === 'dark' ? 'claro' : 'oscuro'}`}
         >
-          <span aria-hidden="true">{theme === 'dark' ? '☀' : '🌙'}</span>
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={17} />
         </button>
       </div>
     </header>

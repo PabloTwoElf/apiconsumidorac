@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { money, tripDate } from '../lib/format';
 import type { CaptureResult } from '../types/api';
 
@@ -30,7 +31,7 @@ export function Receipt({ receipt, fecha, onNew }: Props) {
         }
         aria-hidden="true"
       >
-        {receipt.requiereAtencion ? '⚠' : '✓'}
+        <Icon name={receipt.requiereAtencion ? 'alert' : 'check'} size={28} />
       </div>
 
       <div>
@@ -45,7 +46,7 @@ export function Receipt({ receipt, fecha, onNew }: Props) {
       {receipt.requiereAtencion && (
         <div className="alert alert--warn" style={{ textAlign: 'left' }}>
           <span className="alert__icon" aria-hidden="true">
-            ⚠
+            <Icon name="alert" size={18} />
           </span>
           <div>
             {receipt.conflictos.length} asiento(s) no se pudieron reservar porque otro comprador se

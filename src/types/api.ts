@@ -57,6 +57,8 @@ export interface Quote {
   cantidad: number;
   moneda: string;
   precioUnitario: number;
+  /** 'ruta' si el precio lo fijó el consumidor; 'api' si es el BASE_PRICE del API. */
+  origenPrecio?: 'ruta' | 'api';
   subtotal: number;
   porcentajeDescuento: number;
   montoDescuento: number;

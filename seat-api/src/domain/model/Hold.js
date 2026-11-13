@@ -6,13 +6,27 @@
  * nadie tenga que intervenir.
  */
 export class Hold {
-  constructor({ holdId, rutaId, fecha, asiento, userId, companyName = null, createdAt, expiresAt }) {
+  constructor({
+    holdId,
+    rutaId,
+    fecha,
+    asiento,
+    userId,
+    companyName = null,
+    // Precio unitario de la ruta que el consumidor fijó al bloquear. Si es null
+    // se usa el BASE_PRICE del API. Viaja en el hold para que la orden de PayPal
+    // se cotice con el mismo precio que vio el comprador.
+    precioUnitario = null,
+    createdAt,
+    expiresAt,
+  }) {
     this.holdId = holdId;
     this.rutaId = rutaId;
     this.fecha = fecha;
     this.asiento = asiento;
     this.userId = userId;
     this.companyName = companyName;
+    this.precioUnitario = precioUnitario;
     this.createdAt = createdAt;
     this.expiresAt = expiresAt;
   }
@@ -43,6 +57,7 @@ export class Hold {
       asiento: this.asiento,
       userId: this.userId,
       companyName: this.companyName,
+      precioUnitario: this.precioUnitario,
       createdAt: this.createdAt,
       expiresAt: this.expiresAt,
     };

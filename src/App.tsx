@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckoutPanel } from './components/CheckoutPanel';
+import { Icon } from './components/Icon';
 import { SeatMap } from './components/SeatMap';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
@@ -21,6 +22,14 @@ export default function App() {
 
   const [rutaId, setRutaId] = useState('123');
   const [fecha, setFecha] = useState(() => todayIso(7));
+  // Precio por asiento de la ruta. Vacío = el BASE_PRICE del API. En
+  // CulturalTrip este valor sale del catálogo de rutas (p. ej. 18 USD para
+  // Guayaquil-Quito); aquí se puede escribir para probar el mismo flujo.
+  const [precioTexto, setPrecioTexto] = useState('');
+  const precioUnitario = (() => {
+    const n = Number(precioTexto.replace(',', '.'));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [gateway, setGateway] = useState<GatewayConfig | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
@@ -41,7 +50,8 @@ export default function App() {
   });
 
   const { quote, loading: quoteLoading } = useQuote(
-    checkout.hold ? checkout.hold.asientos.length : selected.size
+    checkout.hold ? checkout.hold.asientos.length : selected.size,
+    checkout.hold ? (checkout.hold.pricing?.precioUnitario ?? precioUnitario) : precioUnitario
   );
 
   // Estado de la conexión y configuración de la pasarela, una vez al arrancar.
@@ -130,10 +140,10 @@ export default function App() {
 
   const handleHold = useCallback(
     (companyName?: string) => {
-      void checkout.holdSeats([...selected], companyName);
+      void checkout.holdSeats([...selected], companyName, precioUnitario);
       setSelected(new Set());
     },
-    [checkout, selected]
+    [checkout, selected, precioUnitario]
   );
 
   const handleApprove = useCallback(
@@ -157,7 +167,7 @@ export default function App() {
         {online === false && (
           <div className="alert alert--bad" style={{ marginBottom: 18 }}>
             <span className="alert__icon" aria-hidden="true">
-              ✕
+              <Icon name="x-circle" size={18} />
             </span>
             <div>
               No hay respuesta del Seat API. Arráncala con{' '}
@@ -173,7 +183,7 @@ export default function App() {
             <div className="panel__head">
               <div>
                 <h1 className="panel__title">
-                  <span aria-hidden="true">🗺️</span> Elige tu asiento
+                  <Icon name="seat" size={18} /> Elige tu asiento
                 </h1>
                 <p className="panel__sub">
                   Ruta {rutaId} · {tripDate(fecha)}
@@ -192,10 +202,14 @@ export default function App() {
               <TripControls
                 rutaId={rutaId}
                 fecha={fecha}
+                precio={precioTexto}
+                precioBase={data?.precios.precioUnitario ?? null}
+                moneda={data?.precios.moneda ?? 'USD'}
                 refreshing={refreshing || loading}
                 locked={locked}
                 onRutaChange={setRutaId}
                 onFechaChange={setFecha}
+                onPrecioChange={setPrecioTexto}
                 onRefresh={reload}
               />
             </div>
@@ -203,7 +217,7 @@ export default function App() {
             {locked && (
               <div className="alert alert--ok" style={{ marginBottom: 18 }}>
                 <span className="alert__icon" aria-hidden="true">
-                  🔒
+                  <Icon name="lock" size={18} />
                 </span>
                 <div>
                   Tienes asientos bloqueados para este viaje. Completa o cancela el pago para
@@ -215,7 +229,7 @@ export default function App() {
             {error && !loading && (
               <div className="alert alert--bad" style={{ marginBottom: 18 }}>
                 <span className="alert__icon" aria-hidden="true">
-                  ✕
+                  <Icon name="x-circle" size={18} />
                 </span>
                 <div>
                   {error}

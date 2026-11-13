@@ -19,12 +19,17 @@ export class HoldSeats {
     this.holdTtlMs = holdTtlMs;
   }
 
-  execute({ rutaId, fecha, asiento, asientos, userId, companyName = null }) {
+  execute({ rutaId, fecha, asiento, asientos, userId, companyName = null, precioUnitario = null }) {
     const requested = this.#normalizeSeats({ asiento, asientos });
 
     if (!rutaId || !fecha || !userId) {
       throw new ValidationError('rutaId, fecha, userId y al menos un asiento son obligatorios');
     }
+
+    // Precio de la ruta fijado por el consumidor. Se valida aquí (antes de
+    // tocar el inventario) y se guarda en cada hold, para que la orden de PayPal
+    // lo recupere sin que el navegador tenga que volver a enviarlo.
+    const unitPrice = this.pricingPolicy.resolveUnitPrice(precioUnitario);
 
     requested.forEach((numero) => this.seatLayout.assertValidSeat(numero));
 
@@ -63,6 +68,7 @@ export class HoldSeats {
           asiento: numero,
           userId,
           companyName: companyName ? String(companyName).trim() : null,
+          precioUnitario: unitPrice,
           createdAt: now,
           expiresAt: now + this.holdTtlMs,
         });
@@ -78,7 +84,7 @@ export class HoldSeats {
       throw error;
     }
 
-    const pricing = this.pricingPolicy.quote(created.length);
+    const pricing = this.pricingPolicy.quote(created.length, { unitPrice });
     const expiresAt = now + this.holdTtlMs;
 
     return {
@@ -101,6 +107,7 @@ export class HoldSeats {
         montoDescuento: pricing.discountAmount,
         total: pricing.total,
         ahorros: pricing.savings,
+        origenPrecio: pricing.priceSource,
       },
     };
   }

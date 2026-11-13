@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HoldTimer } from './HoldTimer';
+import { Icon } from './Icon';
 import { PayPalCheckout } from './PayPalCheckout';
 import { PriceBreakdown } from './PriceBreakdown';
 import { Receipt } from './Receipt';
@@ -96,7 +97,7 @@ export function CheckoutPanel({
         <div className="panel__head">
           <div>
             <h2 className="panel__title">
-              <span aria-hidden="true">🛒</span> Tu reserva
+              <Icon name="cart" size={18} /> Tu reserva
             </h2>
             <p className="panel__sub">Elige asientos en el mapa</p>
           </div>
@@ -106,7 +107,7 @@ export function CheckoutPanel({
 
         <div className="empty">
           <span className="empty__icon" aria-hidden="true">
-            🎟️
+            <Icon name="ticket" size={30} />
           </span>
           Toca los asientos libres del bus para empezar.
           {tripPricing && (
@@ -124,7 +125,7 @@ export function CheckoutPanel({
       <div className="panel__head">
         <div>
           <h2 className="panel__title">
-            <span aria-hidden="true">🛒</span> Tu reserva
+            <Icon name="cart" size={18} /> Tu reserva
           </h2>
           <p className="panel__sub">
             {seats.length} asiento{seats.length === 1 ? '' : 's'} · {paying ? 'listo para pagar' : 'sin bloquear'}
@@ -150,7 +151,7 @@ export function CheckoutPanel({
                   aria-label={`Quitar el asiento ${numero}`}
                   title={`Quitar el asiento ${numero}`}
                 >
-                  ✕
+                  <Icon name="x" size={11} />
                 </button>
               )}
             </span>
@@ -193,13 +194,12 @@ export function CheckoutPanel({
             >
               {holding ? (
                 <>
-                  <span className="spin" aria-hidden="true">
-                    ◌
-                  </span>{' '}
-                  Bloqueando…
+                  <Icon name="loader" size={15} spin /> Bloqueando…
                 </>
               ) : (
-                <>Bloquear y pagar</>
+                <>
+                  <Icon name="lock" size={15} /> Bloquear y pagar
+                </>
               )}
             </button>
             <button type="button" className="btn btn--block" disabled={holding} onClick={onClear}>
@@ -226,8 +226,8 @@ export function CheckoutPanel({
 
           {capturing && (
             <div className="alert alert--ok" style={{ marginTop: 12 }}>
-              <span className="alert__icon spin" aria-hidden="true">
-                ◌
+              <span className="alert__icon" aria-hidden="true">
+                <Icon name="loader" size={18} spin />
               </span>
               <div>Confirmando el pago y reservando tus asientos…</div>
             </div>

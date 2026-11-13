@@ -38,3 +38,6 @@ build
 *.njsproj
 *.sln
 *.sw?
+
+# Configuración local del asistente (vista previa del dev server)
+.claude/

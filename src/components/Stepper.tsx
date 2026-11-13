@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import type { Phase } from '../hooks/useCheckout';
 
 const STEPS = [
@@ -34,7 +35,7 @@ export function Stepper({ phase }: { phase: Phase }) {
             aria-current={state === 'active' ? 'step' : undefined}
           >
             <span className="stepper__dot" aria-hidden="true">
-              {state === 'done' ? '✓' : index + 1}
+              {state === 'done' ? <Icon name="check" size={11} /> : index + 1}
             </span>
             {step.label}
           </li>

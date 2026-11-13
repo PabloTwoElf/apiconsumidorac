@@ -248,7 +248,7 @@ export const clientScript = () => /* js */ `
       tag.textContent = '#' + numero;
       if (!hasHolds) {
         var x = document.createElement('button');
-        x.textContent = '✕';
+        x.textContent = '\u00d7';
         x.setAttribute('aria-label', 'Quitar asiento ' + numero);
         x.addEventListener('click', function () { toggleSeat(numero); });
         tag.appendChild(x);
@@ -461,8 +461,8 @@ export const clientScript = () => /* js */ `
           '<strong>' + esc(p.cobro.valor) + ' ' + esc(p.cobro.moneda) + '</strong>' +
           '<span class="sub">' + esc(p.pagador || p.userId) + '</span>' +
           '<span style="margin-left:auto;display:flex;gap:8px">' +
-          '<button class="primary" data-act="aprobar" data-id="' + esc(p.orderId) + '">✅ Aprobar</button>' +
-          '<button data-act="rechazar" data-id="' + esc(p.orderId) + '">✖ Rechazar</button>' +
+          '<button class="primary" data-act="aprobar" data-id="' + esc(p.orderId) + '">Aprobar</button>' +
+          '<button data-act="rechazar" data-id="' + esc(p.orderId) + '">Rechazar</button>' +
           '</span></div>';
       }).join('');
     } catch (err) {

@@ -110,7 +110,7 @@
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  font-size: 21px;
+  color: var(--sky);
   border-radius: var(--r-md);
   background: var(--accent-grad-soft);
   border: 1px solid var(--edge-strong);
@@ -353,17 +353,24 @@
 
 .trip {
   display: grid;
-  grid-template-columns: 1fr 1.3fr auto;
+  grid-template-columns: 1fr 1.2fr 1fr auto;
   gap: 12px;
-  align-items: end;
+  align-items: start;
 }
 
-@media (max-width: 560px) {
+.trip .btn {
+  margin-top: 21px;
+}
+
+@media (max-width: 720px) {
   .trip {
     grid-template-columns: 1fr 1fr;
   }
   .trip > :last-child {
     grid-column: 1 / -1;
+  }
+  .trip .btn {
+    margin-top: 0;
   }
 }
 
@@ -371,24 +378,114 @@
    El bus
    ============================================================ */
 
-.bus__screen {
+/* Carrocería: parabrisas, cabina, laterales (ventanas), filas y cola. */
+.bus {
+  position: relative;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 0 0 12px;
+  background: var(--glass-1);
+  border: 1px solid var(--edge-strong);
+  border-radius: 46px 46px 26px 26px;
+  box-shadow: var(--lift-1);
+  overflow: hidden;
+}
+
+.bus__front {
+  padding: 14px 26px 10px;
+}
+
+.bus__windshield {
+  display: block;
   text-align: center;
-  padding: 10px;
-  margin-bottom: 18px;
-  font-size: 0.71rem;
-  letter-spacing: 0.1em;
+  padding: 9px 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-faint);
+  background: linear-gradient(180deg, var(--glass-3), var(--glass-1));
+  border: 1px solid var(--edge);
+  border-radius: 18px 18px 8px 8px;
+  /* Trapecio sutil: sugiere el parabrisas y orienta el mapa. */
+  clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
+}
+
+.bus__cabin {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 16px 12px;
+  padding: 0 6px 12px;
+  border-bottom: 1px dashed var(--edge-strong);
+}
+
+.bus__cabin-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
   background: var(--glass-2);
   border: 1px solid var(--edge);
-  border-radius: var(--r-md);
-  /* Trapecio sutil: sugiere el parabrisas y orienta el mapa. */
-  clip-path: polygon(6% 0, 94% 0, 100% 100%, 0 100%);
+  border-radius: 999px;
+}
+
+.bus__cabin-item--driver .icon {
+  color: var(--sky);
+}
+
+.bus__body {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 20px;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+/* Lateral del bus: franjas que sugieren las ventanas de cada fila. */
+.bus__rail {
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid var(--edge);
+  background: repeating-linear-gradient(180deg, var(--glass-3) 0 26px, transparent 26px 34px);
+}
+
+.bus__rail span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  white-space: nowrap;
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.bus__rail--right span {
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .bus__rows {
   display: grid;
   gap: 10px;
+  padding: 2px 0;
+}
+
+.bus__back {
+  margin: 14px 16px 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--edge-strong);
+  text-align: center;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
 .row {
@@ -412,6 +509,7 @@
   gap: 9px;
 }
 
+/* Pasillo: línea de guía discontinua entre los dos lados. */
 .row__aisle {
   width: 26px;
   flex-shrink: 0;
@@ -426,6 +524,19 @@
   border-radius: 2px;
   background: var(--ink-faint);
   opacity: 0.4;
+}
+
+@media (max-width: 480px) {
+  .bus__body {
+    grid-template-columns: 12px minmax(0, 1fr) 12px;
+    padding: 0 4px;
+  }
+  .bus__rail span {
+    display: none;
+  }
+  .row__aisle {
+    width: 16px;
+  }
 }
 
 /* --- Asiento --- */
@@ -509,26 +620,21 @@
   opacity: 0.55;
 }
 
-/* Marca de esquina para los asientos ya pagados: el color por sí solo no
-   basta para quien no lo distingue. */
-.seat--taken::after,
-.seat--mine::after {
+/* Marca de esquina (icono SVG) para asientos pagados o propios: el color por
+   sí solo no basta para quien no lo distingue. */
+.seat__mark {
   position: absolute;
-  top: 3px;
+  top: 4px;
   right: 5px;
-  font-size: 0.5rem;
-  line-height: 1;
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
-.seat--taken::after {
-  content: '✕';
-  color: var(--bad);
-}
-
-.seat--mine::after {
-  content: '✓';
+.seat__mark--ok {
   color: var(--ok);
+}
+
+.seat__mark--bad {
+  color: var(--bad);
 }
 
 /* --- Leyenda y recuento --- */
@@ -874,7 +980,22 @@
 
 .alert__icon {
   flex-shrink: 0;
-  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.alert--ok .alert__icon { color: var(--ok); }
+.alert--warn .alert__icon { color: var(--warn); }
+.alert--bad .alert__icon { color: var(--bad); }
+.toast--ok .alert__icon { color: var(--ok); }
+.toast--warn .alert__icon { color: var(--warn); }
+.toast--bad .alert__icon { color: var(--bad); }
+
+/* Iconografía vectorial (components/Icon.tsx): hereda el color del texto. */
+.icon {
+  display: inline-block;
+  vertical-align: -0.125em;
 }
 
 .alert--ok {
@@ -978,10 +1099,9 @@
 }
 
 .empty__icon {
-  font-size: 1.7rem;
   display: block;
   margin-bottom: 8px;
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .skeleton {
@@ -1029,7 +1149,7 @@
   margin: 2px auto 0;
   display: grid;
   place-items: center;
-  font-size: 26px;
+  color: var(--ok);
   border-radius: 50%;
   background: rgba(74, 222, 128, 0.18);
   border: 1px solid rgba(74, 222, 128, 0.45);
